@@ -30,7 +30,7 @@
 \maketitle
 
 \begin{abstract}
-単体法は，線型計画問題を解くためのよく知られた枠組みであるが，一般の線形計画問題に対しては，ネットワークフロー問題や右辺が非負な不等式標準形など一部の特殊なクラスを除き，実行可能な初期基底解を計算なしに構成する一般的な方法は知られておらず，実務上は2段階法やBig$-M$法，あるいはクラッシュ手続きのような補助的な手続きを要する．一方，主実行可能性ではなく\emph{双対実行可能性}に着目すると，コスト係数の符号のみから非基底変数の配置(下限か上限か)を決定でき，全スラック基底は計算なしに双対実行可能な初期基底となる．ただし，この構成は非基底変数を有限な上下限に配置できることを前提とするため，下限・上限が非有界な変数に対しては直接適用できない．任意の線形計画問題に対して，非有界な下限・上限を任意の正数 $M$ を用いてそれぞれ $-M,+M$ に置き換えて問題をあらかじめ有界化した上では，各等式制約に値を $0$ に固定したスラック変数を追加することにより，フェーズ1を要さずに自明な双対実行可能初期基底を構成し，それを用いて上下限制約付き双対単体法をただちに開始できる．本稿では，そのアルゴリズムの計算式を任意に大きい$M$に対して具体的に解析することで，非有界な変数を持つ一般の線型計画問題に対して初期基底の構築が不要な単体法の拡張手法を与える．
+単体法は，線型計画問題を解くためのよく知られた枠組みであるが，一般の線形計画問題に対しては，ネットワークフロー問題や右辺が非負な不等式標準形など一部の特殊なクラスを除き，実行可能な初期基底解を計算なしに構成する一般的な方法は知られておらず，実務上は2段階法やBig$-M$法，あるいはクラッシュ手続きのような補助的な手続きを要する．一方，主実行可能性ではなく\emph{双対実行可能性}に着目すると，コスト係数の符号のみから非基底変数の配置(下限か上限か)を決定でき，全スラック基底は計算なしに双対実行可能な初期基底となる．ただし，この構成は非基底変数を有限な上下限に配置できることを前提とするため，下限・上限が非有界な変数に対しては直接適用できない．任意の線形計画問題に対して，非有界な下限・上限のうち，コスト係数の符号がその無限側への配置を要求する変数についてのみ，任意の正数 $M$ を用いて有限な値 $\mp M$ に置き換えて問題を部分的に有界化した上では，各等式制約に値を $0$ に固定したスラック変数を追加することにより，フェーズ1を要さずに自明な双対実行可能初期基底を構成し，それを用いて上下限制約付き双対単体法をただちに開始できる．本稿では，そのアルゴリズムの計算式を任意に大きい$M$に対して具体的に解析することで，非有界な変数を持つ一般の線型計画問題に対して初期基底の構築が不要な単体法の拡張手法を与える．
 \end{abstract}
 
 \section{はじめに}
@@ -208,29 +208,52 @@
 
 以下では，この前処理が済んでいるものとして，記号 $A,b,c,l,u$ を $A,b',c,l',u'$ の意味で用いる．すなわち，片側のみ非有界な変数については，有限な側の上下限が $0$ であると仮定してよい．この仮定のもとでは，非基底変数 $j$ が(元々非有界であった側とは反対の)有限な上下限に配置されている場合，その値は $M$ に依存せず常に $\hat l_j=0$ または $\hat u_j=0$ である．
 
-\subsection{非有界変数の $M$ による有界化}
+\subsection{必要な変数に限定した $M$ による有界化}
+\label{sec:trunc}
 
-任意に $M>0$ を固定する．各 $j=1,\dots,n$ に対し，有界化された上下限を
+第4.1節の前処理を終えた時点で，残る変数の添字集合 $\{1,\dots,n\}$ は，上下限の有限性に関して次の3種類に排他的に分類される(自由変数は既に消去済みであり，片側のみ非有界な変数は，非有界でない側の上下限がちょうど $0$ になっていることに注意する)．
+\[
+  J_{\mathrm{box}} := \{\,j: l_j>-\infty,\ u_j<+\infty\,\},\qquad
+  J_L := \{\,j: l_j=-\infty\,\}\ (\text{このとき }u_j=0),\qquad
+  J_U := \{\,j: u_j=+\infty\,\}\ (\text{このとき }l_j=0).
+\]
+
+次節(第4.3節)で構成する全スラック基底の非基底配置規則 $c_j\ge0\Rightarrow\eta(j)=L$，$c_j<0\Rightarrow\eta(j)=U$ が\emph{定義可能}である(配置先の上下限が有限である)ためには，$j\in J_L$ で $c_j>0$(下限 $-\infty$ 側への配置が要求される)場合，および $j\in J_U$ で $c_j<0$(上限 $+\infty$ 側への配置が要求される)場合に限り，実際に $M$ による置き換えが必要になる．逆に，$j\in J_L$ で $c_j\le0$ ならば $\eta(j)=U$(有限，値 $0$)で双対実行可能性の条件($c_j\le0$)が満たされ，$j\in J_U$ で $c_j\ge0$ ならば $\eta(j)=L$(有限，値 $0$)で条件($c_j\ge0$)が満たされるから，これらの変数については $M$ による置き換えは不要である．
+
+そこで，実際に $M$ による有界化を要する添字の集合を
+\begin{equation}
+  S \ :=\ \{\,j\in J_L : c_j>0\,\} \ \cup\ \{\,j\in J_U : c_j<0\,\}
+  \label{eq:S-def}
+\end{equation}
+と定める．任意に $M>0$ を固定し，有界化された上下限を
 \begin{equation}
   \hat l_j :=
   \begin{cases}
-    l_j & (l_j > -\infty)\\
-    -M & (l_j = -\infty)
+    l_j & (j\notin J_L)\\
+    -M & (j\in J_L\cap S)\\
+    -\infty & (j\in J_L\setminus S)
   \end{cases}
   ,\qquad
   \hat u_j :=
   \begin{cases}
-    u_j & (u_j < +\infty)\\
-    M & (u_j = +\infty)
+    u_j & (j\notin J_U)\\
+    M & (j\in J_U\cap S)\\
+    +\infty & (j\in J_U\setminus S)
   \end{cases}
   \label{eq:trunc}
 \end{equation}
-と定める．元々有限であった上下限はそのまま用い，非有界であった側のみ $\mp M$ に置き換える．$\hat l_j,\hat u_j$ はすべて有限であるから，問題
+と定める．すなわち，$j\in S$ については非有界であった側を $\mp M$ に置き換えるが，$j\in(J_L\cup J_U)\setminus S$ については，非有界であった側を第2.1節と同じ拡大実数値 $\mp\infty$ のまま真に残す．
+
+問題
 \begin{equation}
   \min\ c^\top x \quad \text{s.t.}\quad Ax=b,\ \hat l\le x\le \hat u
   \label{eq:lpM}
 \end{equation}
-は上下限制約付き単体法がそのまま適用できる有界な問題となる．$\hat l\le l$ 側は不変，$\hat u\ge u$ 側も不変であり，$[\hat l,\hat u]\subseteq[l,u]$ であるから，\eqref{eq:lpM}の実行可能領域は元の問題\eqref{eq:lp}の実行可能領域の部分集合である．
+は，第2.1節と同じ意味で(拡大実数値の上下限を許す)一般の上下限制約付きLPであり，$j\in J_{\mathrm{box}}\cup S$ の座標では $\hat l_j,\hat u_j$ がともに有限，$j\in(J_L\cup J_U)\setminus S$ の座標では真の上下限 $l_j,u_j$ と文字通り一致する(したがって非有界のまま)．いずれの場合も $\hat l\le l$ 側は不変，$\hat u\ge u$ 側も不変であり，$[\hat l,\hat u]\subseteq[l,u]$ であるから，\eqref{eq:lpM}の実行可能領域は元の問題\eqref{eq:lp}の実行可能領域の部分集合である．
+
+\begin{remark}
+非有界な上下限を持つにもかかわらず $S$ に含まれない変数($j\in(J_L\cup J_U)\setminus S$)に対して $M$ という記号を導入する必要が全くない点が，本稿の構成の特徴である．次節で見るように，このような $j$ は非基底の初期配置の候補にすらならず(命題~\ref{prop:s-confinement})，$M\to\infty$ の解析(第4.5節)で追跡すべき対象は，最初から $S$ に属する変数のみに限定される．
+\end{remark}
 
 \subsection{ゼロ固定スラック変数による自明な初期基底}
 
@@ -244,17 +267,17 @@
 \[
   A_{B_0}^{-1} = I_m
 \]
-であり，逆行列の計算すら不要である．非基底(原変数)の状態は，コスト係数の符号のみから
+であり，逆行列の計算すら不要である．非基底(原変数)の状態は，コスト係数の符号と第4.2節の型分類 $J_L$ のみから
 \begin{equation}
   \eta(j) =
   \begin{cases}
-    L, \ x_j=\hat l_j & (c_j \ge 0)\\
-    U, \ x_j=\hat u_j & (c_j < 0)
+    L, \ x_j=\hat l_j & c_j>0,\ \text{または}\ (c_j=0\ \text{かつ}\ j\notin J_L)\\
+    U, \ x_j=\hat u_j & c_j<0,\ \text{または}\ (c_j=0\ \text{かつ}\ j\in J_L)
   \end{cases}
   \qquad (j=1,\dots,n)
   \label{eq:init-status}
 \end{equation}
-と定める．このとき基底(スラック)変数の値は
+と定める．コストが厳密に正または負の変数は従来通り符号のみで配置が決まるが，コスト $0$ の変数については，双対実行可能性の条件($\eta=L$ なら $\bar c_j\ge0$，$\eta=U$ なら $\bar c_j\le0$)をどちらの配置でも満たすことを利用し，$j\in J_L$(下限が非有界)の場合に限り $U$(有限，値 $0$)側へ，それ以外の場合は $L$ 側へ配置するというタイブレークを採用する．こうして得られる非基底値がすべて有限であることは，第4.2節の $S$ の定義から直ちに確認できる：$j\in J_{\mathrm{box}}$ では $\hat l_j,\hat u_j$ がそもそも有限．$j\in J_L$ で $\eta(j)=L$ となるのは $c_j>0$ の場合に限られ，このとき $j\in S$ であるから $\hat l_j=-M$ は有限であり，$\eta(j)=U$ となる $c_j\le0$ の場合は $\hat u_j=u_j=0$ が常に有限である．$j\in J_U$ についても対称に，$\eta(j)=U$ となる $c_j<0$ の場合は $j\in S$ であるから $\hat u_j=M$ が有限であり，$\eta(j)=L$ となる $c_j\ge0$ の場合は $\hat l_j=l_j=0$ が有限である．すなわち，\eqref{eq:init-status}はすべての $j$ に対して well-defined であり，しかも $j\in(J_L\cup J_U)\setminus S$ は決して非有界であった側に配置されない．このとき基底(スラック)変数の値は
 \begin{equation}
   x_{B_0} = s = b - A x_N
   \label{eq:init-basic}
@@ -271,10 +294,35 @@
 \[
   \bar c_j = c_j - y^\top A_j = c_j
 \]
-となり，コストそのものに一致する．\eqref{eq:init-status}より，$c_j\ge0$ のとき $\eta(j)=L$ かつ $\bar c_j=c_j\ge0$，$c_j<0$ のとき $\eta(j)=U$ かつ $\bar c_j=c_j<0\le0$ であるから，双対実行可能性の条件を満たす．基底変数($s$)の被約費用は定義より恒等的に $0$ であり，条件を課す必要がない．
+となり，コストそのものに一致する．\eqref{eq:init-status}より，$\eta(j)=L$ ならば $c_j>0$ または($c_j=0$ かつ $j\notin J_L$)であり，いずれの場合も $c_j\ge0$，ゆえに $\bar c_j=c_j\ge0$．同様に $\eta(j)=U$ ならば $c_j<0$ または($c_j=0$ かつ $j\in J_L$)であり，いずれの場合も $c_j\le0$，ゆえに $\bar c_j=c_j\le0$．したがって双対実行可能性の条件を満たす．基底変数($s$)の被約費用は定義より恒等的に $0$ であり，条件を課す必要がない．
 \end{proof}
 
-命題~\ref{prop:dual-feasible-init}により，$(B_0,\eta,x)$ は\emph{計算コストなしに}双対実行可能な初期基底となる．ここで本質的に用いているのは，(a) $s$ のコストが $0$ であることと $A_{B_0}=I$ であることから単体乗数が自明に $y=0$ となること，(b) 非基底変数を配置すべき上下限 $\hat l_j,\hat u_j$ がいずれも有限であること，の2点である．(b)はまさに第4.2節の $M$ による有界化によって保証されている．元の問題に非有界な変数が存在する限り，この有界化なしには\eqref{eq:init-status}の配置(特に $u_j=+\infty$ の変数を $\eta(j)=U$ に置くこと，あるいは $l_j=-\infty$ の変数を $\eta(j)=L$ に置くこと)が定義できない点に注意されたい．
+命題~\ref{prop:dual-feasible-init}により，$(B_0,\eta,x)$ は\emph{計算コストなしに}双対実行可能な初期基底となる．ここで本質的に用いているのは，(a) $s$ のコストが $0$ であることと $A_{B_0}=I$ であることから単体乗数が自明に $y=0$ となること，(b) 非基底変数を配置すべき上下限 $\hat l_j,\hat u_j$ がいずれも有限であること，の2点である．(b)は第4.2節の $S$ の定義と，コスト $0$ の変数に対する上記のタイブレークによって保証されている．元の問題に非有界な変数が存在する限り，$j\in S$ についてはこの部分的な有界化なしには\eqref{eq:init-status}の配置が定義できない点に注意されたい(一方，$j\in(J_L\cup J_U)\setminus S$ については，そもそも非有界であった側に配置する必要が生じないため，$M$ を導入する理由がない)．
+
+初期基底が双対実行可能であることに加えて，$S$ に含まれない非有界変数が\emph{今後も一切}非有界側に配置されないことを確認しておく．これにより，以降の $M\to\infty$ の解析(第4.5節)の対象を最初から $S$ に限定してよいことが保証される．
+
+\begin{proposition}[非 $S$ 変数の恒久的な有限配置]
+\label{prop:s-confinement}
+$j\in(J_L\cup J_U)\setminus S$ とする．拡張双対単体法(第4.5節のStep~2)による組合せ的状態遷移列 $(B^{(0)},\eta^{(0)})\to(B^{(1)},\eta^{(1)})\to\cdots$ のいかなる $k\ge0$ においても，$j$ が非基底であれば，$\eta^{(k)}(j)$ は $j$ の真に有限な側($j\in J_L$ なら $U$，$j\in J_U$ なら $L$)である．(BFRTを併用する場合の扱いは第4.6節末尾で改めて与える．)
+\end{proposition}
+
+\begin{proof}
+$k$ に関する帰納法で示す．対称性より $j\in J_L\setminus S$ の場合のみ扱う(このとき $c_j\le0$，$u_j=0$)．
+
+$k=0$：\eqref{eq:init-status}のタイブレークにより，$j\in J_L\setminus S$ は $c_j\le0$ であるから $\eta^{(0)}(j)=U$．主張の通り．
+
+帰納段階：$(B^{(k)},\eta^{(k)})$ で主張が成り立つと仮定し，$(B^{(k)},\eta^{(k)})\to(B^{(k+1)},\eta^{(k+1)})$ の1回のピボット(Step~2(a)--(d))を考える．
+\begin{itemize}
+\item $j$ が基底のままか，非基底のままこの反復で状態を変えなければ，仮定によりそのまま成り立つ．
+\item $j$ が非基底から加入変数として基底化する場合，$j$ は非基底集合から除かれるので主張は空虚に成り立つ．
+\item $j$ が基底のまま脱退行 $r$($\beta(r)=j$)として選ばれる場合，Step~2(a)の脱退方向は $x_{B,r}<\hat l_j=-\infty$($d=+1$)または $x_{B,r}>\hat u_j=u_j$($d=-1$)のいずれかで決まるが，$x_{B,r}$ は常に有限な実数であるから前者は成立し得ない．ゆえに $d=-1$ が選ばれ，$j$ は有限な $\hat u_j=u_j$ に固定されて非基底化する．
+\end{itemize}
+以上のいずれの場合も，$(B^{(k+1)},\eta^{(k+1)})$ で $j$ について主張が成り立つ．
+\end{proof}
+
+\begin{remark}
+命題~\ref{prop:s-confinement}により，非有界な上下限を持つがコストの符号ゆえに $M$ による有界化を要しない変数($j\in(J_L\cup J_U)\setminus S$)は，反復のいかなる段階でも非基底の無限側に置かれることが構造的にあり得ない．したがって，第4.4節・第4.5節で行う $M$ に関するアフィン性の解析および補題~\ref{lem:cleanup}の後処理は，もっぱら $S$ に属する変数についてのみ行えばよく，$M$ という記号は $S$ に属さない変数に対しては一度も必要にならない．
+\end{remark}
 
 \subsection{$M$有界でのアルゴリズム}
 
@@ -297,39 +345,27 @@
     \hat u_j & (\eta(j)=U)
   \end{cases}
 \]
-であり，$\hat l_j,\hat u_j$ 自体も式~\eqref{eq:trunc}により，$j$ が元々非有界であったか否かで場合分けして
-\[
-  \hat l_j =
-  \begin{cases}
-    l_j & (l_j > -\infty)\\
-    -M & (l_j = -\infty)
-  \end{cases}
-  ,\qquad
-  \hat u_j =
-  \begin{cases}
-    u_j & (u_j < +\infty)\\
-    M & (u_j = +\infty)
-  \end{cases}
-\]
-と与えられる．すなわち，$j$ が元々下限 $-\infty$ を持ち $\eta(j)=L$ であれば $x_j=-M$，元々上限 $+\infty$ を持ち $\eta(j)=U$ であれば $x_j=M$ が，$x_B$ の計算に直接用いられることになる(初回はStep~1の式~\eqref{eq:init-basic}，すなわち $A_B=I$ の場合に一致する．2回目以降は，この式を毎回計算し直す必要はなく，後述(d)のピボット操作によって $x_B$ を逐次更新すればよい)．ここで $\beta(i)$ を行 $i$ に対応する基底変数の添字とすると，判定に用いる上下限 $\hat l_{\beta(i)},\hat u_{\beta(i)}$ は，式~\eqref{eq:trunc}により，$\beta(i)$ が元々非有界であったか否かで場合分けして
+であり，命題~\ref{prop:s-confinement}(あるいは初期配置の定義)により $\eta(j)=L$ となるのは $j\in J_{\mathrm{box}}\cup J_U$(このとき $\hat l_j=l_j$ は真に有限)または $j\in J_L\cap S$(このとき $\hat l_j=-M$)の場合に限られ，$\eta(j)=U$ となるのは対称に $j\in J_{\mathrm{box}}\cup J_L$($\hat u_j=u_j$ 有限)または $j\in J_U\cap S$($\hat u_j=M$)の場合に限られる．すなわち，非基底値が $M$ に依存するのは $j\in S$ の場合のみであり，そのときは $\eta(j)=L$ なら $x_j=-M$，$\eta(j)=U$ なら $x_j=M$ が $x_B$ の計算に直接用いられる(初回はStep~1の式~\eqref{eq:init-basic}，すなわち $A_B=I$ の場合に一致する．2回目以降は，この式を毎回計算し直す必要はなく，後述(d)のピボット操作によって $x_B$ を逐次更新すればよい)．ここで $\beta(i)$ を行 $i$ に対応する基底変数の添字とすると，判定に用いる上下限 $\hat l_{\beta(i)},\hat u_{\beta(i)}$ は，式~\eqref{eq:trunc}により
 \[
   \hat l_{\beta(i)} =
   \begin{cases}
-    l_{\beta(i)} & (l_{\beta(i)} > -\infty)\\
-    -M & (l_{\beta(i)} = -\infty)
+    l_{\beta(i)} & (\beta(i)\notin J_L)\\
+    -M & (\beta(i)\in J_L\cap S)\\
+    -\infty & (\beta(i)\in J_L\setminus S)
   \end{cases}
   ,\qquad
   \hat u_{\beta(i)} =
   \begin{cases}
-    u_{\beta(i)} & (u_{\beta(i)} < +\infty)\\
-    M & (u_{\beta(i)} = +\infty)
+    u_{\beta(i)} & (\beta(i)\notin J_U)\\
+    M & (\beta(i)\in J_U\cap S)\\
+    +\infty & (\beta(i)\in J_U\setminus S)
   \end{cases}
 \]
 と与えられる．これを用いて，$x_B$ のうち自身の上下限を逸脱している行の添字集合(逸脱制約の添字集合)を
 \[
   V \ :=\ \bigl\{\, i\in\{1,\dots,m\} \ :\ x_{B,i} < \hat l_{\beta(i)} \ \text{または}\ x_{B,i} > \hat u_{\beta(i)} \,\bigr\}
 \]
-と定める．とくに $\beta(i)$ が元々下限 $-\infty$ を持っていた場合，$x_{B,i}<\hat l_{\beta(i)}$ は $x_{B,i}<-M$ を意味し，元々上限 $+\infty$ を持っていた場合，$x_{B,i}>\hat u_{\beta(i)}$ は $x_{B,i}>M$ を意味する．$V=\emptyset$ ならば，$x_B$ はすべての上下限を満たしており($\hat l_B\le x_B\le \hat u_B$)，すなわち $(B,\eta,x)$ は問題~\eqref{eq:lpM}に対して主実行可能である．一方，双対実行可能性はStep~1で成立し，かつ以下の(b)--(d)の各反復によって保たれる(第2.3節)ため，この時点で $(B,\eta,x)$ は主・双対ともに実行可能であり，LPの弱双対定理より問題~\eqref{eq:lpM}の最適解である．アルゴリズムを終了する．$V\neq\emptyset$ の場合は(b)に進む．
+と定める．とくに $\beta(i)\in J_L\cap S$ の場合，$x_{B,i}<\hat l_{\beta(i)}$ は $x_{B,i}<-M$ を意味し，$\beta(i)\in J_U\cap S$ の場合，$x_{B,i}>\hat u_{\beta(i)}$ は $x_{B,i}>M$ を意味する．一方 $\beta(i)\in J_L\setminus S$(または $J_U\setminus S$)の場合，$\hat l_{\beta(i)}=-\infty$(または $\hat u_{\beta(i)}=+\infty$)であるから，$x_{B,i}$ が実数である限り下限側(または上限側)の逸脱条件は恒等的に偽であり，判定上は単に該当する不等式を評価しなくてよい．$V=\emptyset$ ならば，$x_B$ はすべての上下限を満たしており($\hat l_B\le x_B\le \hat u_B$)，すなわち $(B,\eta,x)$ は問題~\eqref{eq:lpM}に対して主実行可能である．一方，双対実行可能性はStep~1で成立し，かつ以下の(b)--(d)の各反復によって保たれる(第2.3節)ため，この時点で $(B,\eta,x)$ は主・双対ともに実行可能であり，LPの弱双対定理より問題~\eqref{eq:lpM}の最適解である．アルゴリズムを終了する．$V\neq\emptyset$ の場合は(b)に進む．
 
 \item \textbf{脱退変数の選択．} まず，各 $i\in V$ に対し逸脱量を
 \[
@@ -408,25 +444,25 @@ Step~2(c)(d)(ピボット行・被約費用・加入可能集合・比検定・�
 \[
   x_j(M) =
   \begin{cases}
-    l_j & (\eta(j)=L,\ l_j>-\infty)\\
-    -M & (\eta(j)=L,\ l_j=-\infty)\\
-    u_j & (\eta(j)=U,\ u_j<+\infty)\\
-    M & (\eta(j)=U,\ u_j=+\infty)
+    l_j & (\eta(j)=L,\ j\notin J_L)\\
+    -M & (\eta(j)=L,\ j\in J_L)\\
+    u_j & (\eta(j)=U,\ j\notin J_U)\\
+    M & (\eta(j)=U,\ j\in J_U)
   \end{cases}
 \]
-であるから，$x_N(M) = x_N^0 + M\delta$ と書ける．ここで $x_N^0\in\R^{|N|}$，$\delta\in\{-1,0,1\}^{|N|}$ は $(B,\eta)$ のみに依存し $M$ に依存しない定ベクトルで，$\delta_j=-1\,(\eta(j)=L,l_j=-\infty)$，$\delta_j=+1\,(\eta(j)=U,u_j=+\infty)$，それ以外は $\delta_j=0$ である．したがって
+であるから，$x_N(M) = x_N^0 + M\delta$ と書ける．ここで $x_N^0\in\R^{|N|}$，$\delta\in\{-1,0,1\}^{|N|}$ は $(B,\eta)$ のみに依存し $M$ に依存しない定ベクトルで，$\delta_j=-1\,(\eta(j)=L,j\in J_L)$，$\delta_j=+1\,(\eta(j)=U,j\in J_U)$，それ以外は $\delta_j=0$ である．命題~\ref{prop:s-confinement}により $\eta(j)=L$ かつ $j\in J_L$ となるのは $j\in S$ の場合に限られる(対称に $\eta(j)=U$ かつ $j\in J_U$ も $j\in S$ の場合に限られる)から，$\delta_j\neq0$ ならば $j\in S$ である．すなわち $\delta$ は $S$ の外では恒等的に $0$ であり，以下の $M$ に関するアフィン性の解析はもっぱら $S$ に属する変数の配置のみに由来する．したがって
 \[
   x_B(M) \ =\ A_B^{-1}\bigl(b-A_Nx_N(M)\bigr) \ =\ \underbrace{A_B^{-1}(b-A_Nx_N^0)}_{=:p}\ -\ M\underbrace{A_B^{-1}A_N\delta}_{=:g}
 \]
 は $M$ のアフィン関数であり，係数 $p,g\in\R^m$ は $(B,\eta)$ にのみ依存する(脱退行の添字として既に用いている $r$，加入変数の添字として既に用いている $q$ との混同を避けるため，ここではベクトル係数を $g$ と表す)．
 \end{lemma}
 
-同様に，$\hat l_{\beta(i)}(M),\hat u_{\beta(i)}(M)$ も式~\eqref{eq:trunc}よりそれぞれ($l_{\beta(i)}$ または $-M$)，($u_{\beta(i)}$ または $M$)というアフィン関数であるから，Step~2(a)の逸脱量
+同様に，$\beta(i)\in J_{\mathrm{box}}\cup S$ である限り $\hat l_{\beta(i)}(M),\hat u_{\beta(i)}(M)$ も式~\eqref{eq:trunc}よりそれぞれ($l_{\beta(i)}$ または $-M$)，($u_{\beta(i)}$ または $M$)というアフィン関数であるから，Step~2(a)の逸脱量
 \[
   v_i^-(M) := \hat l_{\beta(i)}(M) - x_{B,i}(M), \qquad
   v_i^+(M) := x_{B,i}(M) - \hat u_{\beta(i)}(M)
 \]
-も，補題~\ref{lem:affine}よりいずれも $M$ のアフィン関数である．これを $v_i^-(M)=a_i^-M+b_i^-$，$v_i^+(M)=a_i^+M+b_i^+$ と書く($a_i^\pm,b_i^\pm\in\R$ は $(B,\eta)$ のみに依存する定数)．
+も，補題~\ref{lem:affine}よりいずれも $M$ のアフィン関数である．これを $v_i^-(M)=a_i^-M+b_i^-$，$v_i^+(M)=a_i^+M+b_i^+$ と書く($a_i^\pm,b_i^\pm\in\R$ は $(B,\eta)$ のみに依存する定数)．一方，$\beta(i)\in(J_L\cup J_U)\setminus S$ の場合は，該当する側($J_L\setminus S$ なら $v_i^-$，$J_U\setminus S$ なら $v_i^+$)は $\hat l_{\beta(i)}=-\infty$(または $\hat u_{\beta(i)}=+\infty$)により恒等的に $-\infty$(定義上，決して $\succ0$ にならない形式的な最小元)となるので，以下の議論では常に無視してよく，もう一方の(真に有限な側に対応する)量のみをアフィン関数として扱えばよい．
 
 \begin{definition}[アフィン関数の辞書式順序]
 2つのアフィン関数 $f(M)=aM+b$，$g(M)=cM+d$ に対し，
@@ -467,7 +503,7 @@ Step~2(c)(d)は $M$ に依存しないから，(a$'$)(b$'$)によって次の状
 \]
 と，やはり $M$ のアフィン関数として表される．ここで $z_0,z_1\in\R$ は最終状態 $(B^\ast,\eta^\ast)$ にのみ依存する定数であり，$M\ge M^\dagger$ の範囲では，この $z(M)=z_0+z_1M$ が問題~\eqref{eq:lpM}の真の最適値そのものである(状態が $(B^\ast,\eta^\ast)$ のまま変化しないため)．
 
-式~\eqref{eq:trunc}より $M_1\le M_2$ ならば $[\hat l(M_1),\hat u(M_1)]\subseteq[\hat l(M_2),\hat u(M_2)]$(有限であった側は不変，非有界であった側のみ広がる)であるから，\eqref{eq:lpM}の実行可能領域は $M$ に関して単調非減少であり，最小値である $z(M)$ は $M$ に関して単調非増加でなければならない．アフィン関数 $z(M)=z_0+z_1M$ がこの性質を持つのは $z_1\le0$ の場合に限られるから，
+式~\eqref{eq:trunc}より $M_1\le M_2$ ならば $[\hat l(M_1),\hat u(M_1)]\subseteq[\hat l(M_2),\hat u(M_2)]$($S$ に属する変数の側のみ $M$ とともに広がり，それ以外(有限であった側，および $S$ に属さない非有界であった側)は不変)であるから，\eqref{eq:lpM}の実行可能領域は $M$ に関して単調非減少であり，最小値である $z(M)$ は $M$ に関して単調非増加でなければならない．アフィン関数 $z(M)=z_0+z_1M$ がこの性質を持つのは $z_1\le0$ の場合に限られるから，
 \[
   z_1 \ \le\ 0
 \]
@@ -483,9 +519,9 @@ $F:=\{x:Ax=b,\ l\le x\le u\}$(元問題~\eqref{eq:lp}の実行可能領域)と�
 \end{lemma}
 
 \begin{proof}
-($\supseteq$)：任意の $M>0$ に対し $[\hat l(M),\hat u(M)]\subseteq[l,u]$(式~\eqref{eq:trunc}，有限であった側は不変，非有界であった側のみ真に拡張される)であるから $F_M\subseteq F$．ゆえに $\bigcup_M F_M\subseteq F$．
+($\supseteq$)：任意の $M>0$ に対し $[\hat l(M),\hat u(M)]\subseteq[l,u]$(式~\eqref{eq:trunc}，$S$ に属する変数の側のみ真に拡張され，それ以外は不変)であるから $F_M\subseteq F$．ゆえに $\bigcup_M F_M\subseteq F$．
 
-($\subseteq$)：$x\in F$ を任意にとる．$x$ は(拡大実数値ではなく)有限な実ベクトルであるから $\|x\|_\infty<\infty$．$M\ge\|x\|_\infty$ ととれば，$x_j$ がもともと有限な上下限を持つ座標では $\hat l_j(M)=l_j\le x_j\le u_j=\hat u_j(M)$ がそのまま成り立ち，もともと非有界であった座標では $|x_j|\le M$ より $-M\le x_j\le M$ が成り立つ．ゆえに $x\in F_M$．
+($\subseteq$)：$x\in F$ を任意にとる．$x$ は(拡大実数値ではなく)有限な実ベクトルである．$M\ge\max_{j\in S}|x_j|$($S=\emptyset$ なら任意の $M>0$)ととれば，$j\notin S$ の座標では $\hat l_j(M),\hat u_j(M)$ が($S$ に属さない以上，真に有限であるか，あるいは元々の $l_j,u_j$ と文字通り一致するかのいずれかであり，いずれにせよ)$l_j\le x_j\le u_j$ から直ちに $\hat l_j(M)\le x_j\le \hat u_j(M)$ が従う．$j\in S$ の座標では $|x_j|\le M$ より $-M\le x_j\le M$ が成り立つ．ゆえに $x\in F_M$．
 \end{proof}
 
 この符号によって，$M\to\infty$ での挙動，したがって元問題~\eqref{eq:lp}の性質が次のように読み取れる．
@@ -536,7 +572,7 @@ $F:=\{x:Ax=b,\ l\le x\le u\}$(元問題~\eqref{eq:lp}の実行可能領域)と�
 上記の $z_1,z_0,p,x_N^0$ はいずれも，最終状態 $(B^\ast,\eta^\ast)$——(a$'$)(b$'$)とStep~2(c)(d)を，数値としての $M$ を固定せずに反復した，組合せ的な状態遷移列の終着点——にのみ依存する．したがって，最適基底 $(B^\ast,\eta^\ast)$ を特定するために，何らかの具体的な数値を $M$ に代入して単体法を実行し直す必要はない．(a$'$)(b$'$)による判定・選択(および最急辺規則・Devex規則を用いる場合は後述の係数3つ組の辞書式比較)と，$M$ に依存しないStep~2(c)(d)とを繰り返し，反復が停止した時点の状態がそのまま最適基底 $(B^\ast,\eta^\ast)$ である．とくに，停止後に $z_1$ を計算して $z_1=0$ であることが確認できれば，元問題~\eqref{eq:lp}は有限な最適値 $z_0$ を持つことが直ちに従う(命題~\ref{prop:trichotomy})．ただし，具体的な最適解ベクトルを一点取り出すには，$(B^\ast,\eta^\ast)$ における $p,x_N^0$ をそのまま $M=0$ で代入するだけでは不十分であり，補題~\ref{lem:cleanup}以下で述べる後処理(退化ピボットによる人工上下限上の非基底変数の除去と，古典的双対単体法の再開)を要する．この後処理もまた $M$ を数値として固定せずに実行できるため，「$M$ を固定しない」という本稿の枠組み自体は損なわれない．
 
 \paragraph{人工上下限に置かれた非基底変数の扱いと後処理．}
-最終状態 $(B^\ast,\eta^\ast)$ で非基底のまま残る変数 $j$ のうち，$\delta_j\neq0$(すなわち，非有界であった側に配置され，非基底値が $M$ に依存して $x_j(M)=\mp M$ となっている)ものを考える．自由変数は第4.1節の前処理で既に消去済みであるから，このような $j$ は片側のみ非有界な変数に限られ，その真に有限な側の上下限は(同じ前処理により)ちょうど $0$ である．
+最終状態 $(B^\ast,\eta^\ast)$ で非基底のまま残る変数 $j$ のうち，$\delta_j\neq0$(すなわち，非有界であった側に配置され，非基底値が $M$ に依存して $x_j(M)=\mp M$ となっている)ものを考える．命題~\ref{prop:s-confinement}により，このような $j$ は必ず $S$ に属する(片側のみ非有界な変数のうち，コスト符号ゆえに $M$ による有界化を要した変数に限られる)．その真に有限な側の上下限は，第4.1節の前処理により(自由変数は既に消去済みであるから)ちょうど $0$ である．
 
 標準的な単体法の議論により，$x_B(M)=A_B^{-1}(b-A_Nx_N(M))$ を用いて $z(M)=c_B^\top x_B(M)+c_N^\top x_N(M)$ を書き直すと，
 \[
@@ -550,13 +586,13 @@ $F:=\{x:Ax=b,\ l\le x\le u\}$(元問題~\eqref{eq:lp}の実行可能領域)と�
 \[
   z_1=0 \quad\Longleftrightarrow\quad \delta_j\neq0\ \text{なるすべての非基底変数 $j$ について}\ \bar c_j=0
 \]
-が成り立つ．これはまさに，非有界な方向に対する標準的な最適性条件——非有界な方向に置かれた非基底変数の被約費用はちょうど $0$ でなければならない(さもなくばその方向に動かすことで目的関数をさらに減少させられ，実際 $\bar c_j\neq0$ であれば $z_1\neq0$ となり(ii)の非有界の場合に該当する)——に他ならない．
+が成り立つ．これはまさに，非有界な方向に対する標準的な最適性条件——非有界な方向に置かれた非基底変数の被約費用はちょうど $0$ でなければならない(さもなくばその方向に動かすことで目的関数をさらに減少させられ，実際 $\bar c_j\neq0$ であれば $z_1\neq0$ となり(ii)の非有界の場合に該当する)——に他ならない．なお，命題~\ref{prop:s-confinement}により $\delta_j\neq0$ となる $j$ は自動的に $S$ に属するから，上式の和は実質的に $S$ に属する変数のみにわたる有限和である．
 
 しかし，このような $\delta_j\neq0$ なる非基底変数が存在する場合，形式的に $M=0$ を代入して得られる点 $(p,x_N^0)$ は，一般には元問題~\eqref{eq:lp}の実行可能解にならない．非基底値 $x_N(0)=x_N^0$ 自身は，$\delta_j=0$ の成分は真の有限値のまま，$\delta_j\neq0$ の成分は前処理(第4.1節)により $M=0$ でちょうど真の(有限側の)上下限に一致するため，常に真に実行可能である．しかし基底値 $x_B(0)=p$ の側にはこの保証がない．$(B^\ast,\eta^\ast)$ の主実行可能性は $M\ge M^\dagger$ の範囲でしか保証されておらず，$x_B(M)=p-Mg$ をこの範囲の外である $M=0$ まで外挿すると，片側のみ真に有限な上下限を持つ基底変数について，その上下限を逸脱しうる．次の補題は，$\bar c_j=0$ という性質を利用してこの問題を解消する．
 
 \begin{lemma}[人工上下限に置かれた非基底変数の退化ピボットによる除去]
 \label{lem:cleanup}
-$z_1=0$ とし，$j\in N$ を $\delta_j\neq0$(したがって $\bar c_j=0$)かつ $A_B^{-1}A_j\neq0$ なる非基底変数とする．このとき，ある行 $r$ で $\alpha_{rj}:=(A_B^{-1}A_j)_r\neq0$ となるものが存在し，その $\beta(r)$(行 $r$ の現在の基底変数)は，第4.1節での自由変数の消去のみから自動的に少なくとも一方の真に有限な上下限を持つ(理由は下記の注を参照)．$j$ を加入変数，$\beta(r)$ を脱退変数とする通常のタブロー更新則によるピボットを行い，$\beta(r)$ をその有限な側の上下限に固定すると，次が成り立つ．
+$z_1=0$ とし，$j\in N$ を $\delta_j\neq0$(したがって命題~\ref{prop:s-confinement}より $j\in S$，かつ $\bar c_j=0$)かつ $A_B^{-1}A_j\neq0$ なる非基底変数とする．このとき，ある行 $r$ で $\alpha_{rj}:=(A_B^{-1}A_j)_r\neq0$ となるものが存在し，その $\beta(r)$(行 $r$ の現在の基底変数)は，第4.1節での自由変数の消去のみから自動的に少なくとも一方の真に有限な上下限を持つ(理由は下記の注を参照)．$j$ を加入変数，$\beta(r)$ を脱退変数とする通常のタブロー更新則によるピボットを行い，$\beta(r)$ をその有限な側の上下限に固定すると，次が成り立つ．
 \begin{enumerate}[label=(\roman*)]
 \item 目的関数値は変化しない．
 \item 他のすべての非基底変数の被約費用は不変である．
@@ -636,41 +672,51 @@ Dantzig則は $\gamma_i\equiv1$ とした特別な場合ではなく，比較す
 \subsection{Bound Flipping Ratio Test (BFRT) との融合}
 \label{sec:bfrt}
 
-Step~2(c)(d)の比検定は，$\mathrm{Eligible}$ の中から単一の加入変数 $q$ を選び，1回のピボットで脱退行 $r$ の逸脱を解消する．古典的な上下限制約付き双対単体法では，これをさらに拡張し，比 $\theta_j:=\hat c_j/|\hat\alpha_j|$ の昇順に $\mathrm{Eligible}$ を走査しながら，両側とも有限な上下限を持つ非基底変数を(ピボットを経ずに)反対側の上下限へ\emph{フリップ}させ，1回の反復でより多くの逸脱を解消する Bound Flipping Ratio Test (BFRT，long-step 双対単体法)\cite{maros2003}が知られている．本稿の設定では，$M$ による有界化(第4.2節)によりすべての非基底変数が真に有限な $\hat l_j,\hat u_j$ を持つため，元々非有界であった変数も含めてすべての非基底変数がフリップの対象となり，かつ以下に見るように，フリップに関わる諸量もまた $M$ のアフィン関数として厳密に扱えるので，BFRTは本稿の枠組みと自然に融合する．
+Step~2(c)(d)の比検定は，$\mathrm{Eligible}$ の中から単一の加入変数 $q$ を選び，1回のピボットで脱退行 $r$ の逸脱を解消する．古典的な上下限制約付き双対単体法では，これをさらに拡張し，比 $\theta_j:=\hat c_j/|\hat\alpha_j|$ の昇順に $\mathrm{Eligible}$ を走査しながら，両側とも有限な上下限を持つ非基底変数を(ピボットを経ずに)反対側の上下限へ\emph{フリップ}させ，1回の反復でより多くの逸脱を解消する Bound Flipping Ratio Test (BFRT，long-step 双対単体法)\cite{maros2003}が知られている．本稿の設定では，$M$ による有界化(第4.2節)は $S$ に属する変数についてのみ行われるため，両側の上下限が(真に，あるいは $M$ を介して)有限であるのは $j\in J_{\mathrm{box}}\cup S$ の場合に限られる．$j\in(J_L\cup J_U)\setminus S$ は，命題~\ref{prop:s-confinement}により非基底の間は常にその真に有限な側に置かれているが，反対側($\hat l_j=-\infty$ または $\hat u_j=+\infty$)へのフリップはそもそも定義できない．そこで，フリップの対象となる候補を
+\[
+  \mathrm{Flip} \ :=\ \mathrm{Eligible}\cap(J_{\mathrm{box}}\cup S)
+\]
+に限定し，$j\in\mathrm{Eligible}\setminus\mathrm{Flip}$(すなわち $(J_L\cup J_U)\setminus S$ に属する候補)はフリップの対象とせず，通常のピボットによる加入変数としてのみ扱う．$\mathrm{Flip}$ に属する候補については，以下に見るようにフリップに関わる諸量が $M$ のアフィン関数として厳密に扱えるので，BFRTはこの限定のもとで本稿の枠組みと自然に融合する．
 
-まず，比 $\theta_j=\hat c_j/|\hat\alpha_j|$ 自体は，$\hat c_j$(被約費用)も $\hat\alpha_j$(タブロー行の成分)も $M$ に依存しない(第4.5節冒頭)ことから，$\mathrm{Eligible}$ を $\theta_j$ の昇順に並べる順序は $M$ によらず一意に定まる．同順位の場合は添字の小さい方を優先する等の規則で決定的に定める．こうして得られた順序を $j_1,j_2,\dots,j_p$($p:=|\mathrm{Eligible}|$，$\theta_{j_1}\le\cdots\le\theta_{j_p}$)とする．
+まず，比 $\theta_j=\hat c_j/|\hat\alpha_j|$ 自体は，$\hat c_j$(被約費用)も $\hat\alpha_j$(タブロー行の成分)も $M$ に依存しない(第4.5節冒頭)ことから，$\mathrm{Eligible}$ を $\theta_j$ の昇順に並べる順序は $M$ によらず一意に定まる(この順序付けは $\mathrm{Flip}$ に属するか否かによらず $\mathrm{Eligible}$ 全体に対して行う)．同順位の場合は添字の小さい方を優先する等の規則で決定的に定める．こうして得られた順序を $j_1,j_2,\dots,j_p$($p:=|\mathrm{Eligible}|$，$\theta_{j_1}\le\cdots\le\theta_{j_p}$)とする．
 
-各 $j\in N$ に対し，$s_j\in\{0,1\}$ を，$j$ が非有界な側を持つかどうかの指示子とする(両側有限なら $s_j=0$，片側のみ非有界なら $s_j=1$；自由変数は第4.1節で消去済みであるから両側非有界の場合は生じない)．また $w_j\ge0$ を
+$\mathrm{Flip}=J_{\mathrm{box}}\cup S$ に属する各候補 $j$ に対し，$s_j\in\{0,1\}$ を，$j\in J_{\mathrm{box}}$ なら $s_j=0$，$j\in S$ なら $s_j=1$ と定める．また $w_j\ge0$ を
 \[
   \hat u_j(M)-\hat l_j(M) \ =\ w_j + s_j M
 \]
-を満たす定数とする(両側有限なら $w_j=u_j-l_j$，下限のみ非有界なら $w_j=u_j$，上限のみ非有界なら $w_j=-l_j$；両側非有界の場合は上述の通り生じない)．変数 $j$ を反対側の上下限へフリップさせたとき，脱退行 $r$ の値 $x_{B,r}$ が $d$ の方向に変化する量(「フリップ容量」)は
+を満たす定数とする($j\in J_{\mathrm{box}}$ なら $w_j=u_j-l_j$，$j\in S\cap J_L$ なら $w_j=u_j$，$j\in S\cap J_U$ なら $w_j=-l_j$)．変数 $j\in\mathrm{Flip}$ を反対側の上下限へフリップさせたとき，脱退行 $r$ の値 $x_{B,r}$ が $d$ の方向に変化する量(「フリップ容量」)は
 \[
   \mathrm{cap}_j(M) \ :=\ |\hat\alpha_j|\,\bigl(w_j+s_jM\bigr)
 \]
 で与えられる($M$ のアフィン関数，傾き $|\hat\alpha_j|s_j\ge0$)．実際，$\eta(j)=L$($\sigma_j=+1$)から $U$ へのフリップは $x_j$ を $+(\hat u_j-\hat l_j)$ だけ変化させ，これによる $x_{B,r}$ への効果は $-\alpha_{rj}(\hat u_j-\hat l_j)=-\sigma_j\alpha_{rj}(\hat u_j-\hat l_j)=-\hat\alpha_j(\hat u_j-\hat l_j)$ であり，$j\in\mathrm{Eligible}$($d\hat\alpha_j<0$)より，この効果はちょうど $d$ の方向に $\mathrm{cap}_j(M)$ だけ $x_{B,r}$ を動かす($\eta(j)=U$ からの反対向きのフリップでも同様の計算により同じ結論が成り立つ)．
 
-第4.5節の記法により脱退行 $r$ の逸脱量は $w_r(M)=a_rM+b_r$(アフィン関数，$r\in V_\infty$ より $w_r\succ0$)であった．累積フリップ容量
+第4.5節の記法により脱退行 $r$ の逸脱量は $w_r(M)=a_rM+b_r$(アフィン関数，$r\in V_\infty$ より $w_r\succ0$)であった．$\theta$ 順に走査しながら，$\mathrm{Flip}$ に属する候補についてのみ累積フリップ容量
 \[
-  C_k(M) \ :=\ \sum_{i=1}^{k} \mathrm{cap}_{j_i}(M) \qquad (k=0,1,\dots,p;\ C_0:=0)
+  C_k(M) \ :=\ \sum_{\substack{i\le k\\ j_i\in\mathrm{Flip}}} \mathrm{cap}_{j_i}(M)
 \]
-もまた $M$ のアフィン関数であり，その係数は $j_1,\dots,j_k$ の $|\hat\alpha_{j_i}|,w_{j_i},s_{j_i}$ から直接計算できる(数値としての $M$ を要しない)．
+を計算する．走査の途中で $\mathrm{Eligible}\setminus\mathrm{Flip}$ に属する候補 $j_k$(すなわち $(J_L\cup J_U)\setminus S$ に属する候補)に到達したなら，それまでの累積 $C_{k-1}$ が $w_r$ を解消していなくても，$j_k$ 自身の反対側は真に $\mp\infty$ であって $j_k$ 自身の上下限による制約を受けずに残る逸脱量をちょうど解消できるから，その時点で走査を打ち切り，$j_k$ を加入変数とすればよい．
 
-\begin{proposition}[BFRTの $M\to\infty$ 版]
+\begin{proposition}[BFRTの $M\to\infty$ 版，$S$ に限定した場合]
 \label{prop:bfrt}
-$k^\ast := \min\{\,k\in\{0,\dots,p\} : \neg(w_r \succ C_k)\,\}$ とする(このような $k$ が存在しなければ $k^\ast$ は未定義とする)．
+$k_0 := \min\{\,k\in\{1,\dots,p\} : j_k\notin\mathrm{Flip}\,\}$(存在しなければ $k_0:=p+1$)とし，
+\[
+  k^\ast \ :=\ \min\Bigl(\{\,k<k_0 : \neg(w_r\succ C_k)\,\}\ \cup\ \{\,k_0\,\}\Bigr)
+\]
+とする(この右辺の集合が，$k_0=p+1$ の場合の $k_0$ も含めて空である場合に限り，$k^\ast$ は未定義とする)．
 \begin{enumerate}[label=(\roman*)]
-\item $k^\ast$ が存在する場合，$k^\ast\ge1$ であり，$j_1,\dots,j_{k^\ast-1}$ を(基底を変えずに)反対側の上下限へフリップさせたのち，$q:=j_{k^\ast}$ を加入変数とする通常のピボット(Step~2(d))を行えば，ある $M^\dagger>0$ が存在して，すべての $M\ge M^\dagger$ でこの手続きは，数値としての $M$ を固定して逐次的に比検定・ピボットを繰り返した場合の結果と一致する．
-\item $k^\ast$ が存在しない場合(すなわち $w_r\succ C_p$)，ある $M^\dagger>0$ が存在して，すべての $M\ge M^\dagger$ で $\mathrm{Eligible}$ 中のすべての変数をフリップさせても脱退行 $r$ の逸脱を解消できず，問題~\eqref{eq:lpM}は実行不可能である．
+\item $k^\ast$ が存在する場合，$k^\ast\ge1$ であり，$j_1,\dots,j_{k^\ast-1}$(いずれも $\mathrm{Flip}$ に属する)を(基底を変えずに)反対側の上下限へフリップさせたのち，$q:=j_{k^\ast}$ を加入変数とする通常のピボット(Step~2(d))を行えば，ある $M^\dagger>0$ が存在して，すべての $M\ge M^\dagger$ でこの手続きは，数値としての $M$ を固定して逐次的に比検定・フリップ・ピボットを繰り返した場合の結果と一致する．
+\item $k^\ast$ が存在しない場合(すなわち $k_0=p+1$，つまり $\mathrm{Eligible}$ がすべて $\mathrm{Flip}$ に属し，かつ $w_r\succ C_p$)，ある $M^\dagger>0$ が存在して，すべての $M\ge M^\dagger$ で $\mathrm{Eligible}$ 中のすべての変数をフリップさせても脱退行 $r$ の逸脱を解消できず，問題~\eqref{eq:lpM}は実行不可能である．
 \end{enumerate}
 \end{proposition}
 
 \begin{proof}
-$w_r,C_0,C_1,\dots,C_p$ は有限個のアフィン関数であるから，それらすべての対に関する $\succ$ の判定は，ある共通の $M^\dagger$ 以降，数値比較と一致する(第4.5節の議論と同様)．$C_k(M)$ は $k$ に関して(各項の傾きが $\ge0$ であるから)$M$ について非減少であり，$r\in V_\infty$ より $w_r\succ0=C_0$ であるから，$k^\ast$ が存在する場合は $k^\ast\ge1$ である．
+$k_0\le p$ の場合，$j_{k_0}\in(J_L\cup J_U)\setminus S$ は反対側の上下限が真に $\mp\infty$ であるから，これを通常のピボットで加入させる操作は，第2.3節の古典的な比検定において「$j_{k_0}$ 自身の上下限による制約」が存在しない($\Delta^\ast$ に相当する量が常に $+\infty$ である)場合に相当し，$j_{k_0}$ を加入変数として選べば行 $r$ の残る逸脱をちょうど解消できる．これは古典的BFRTにおいて，両側有限な候補を使い尽くす前に非有界な候補に到達した場合の標準的な扱いそのものであり，$k^\ast=k_0$ ととることが数値計算とも一致する．
 
-(i)：数値として $M\ge M^\dagger$ を固定して逐次的に比検定・ピボットを行う古典的BFRTは，$\theta$ の昇順に候補を走査しながらフリップ容量の累積が $w_r(M)$ に達するまでフリップを続け，達した時点の候補を加入変数として通常のピボットを行う，という手続きに他ならない．$M\ge M^\dagger$ のもとでは $\succ$ による判定と数値比較が一致するから，この手続きはちょうど $k^\ast$ を用いた上記の判定に一致する．
+$w_r,C_1,\dots,C_{k_0-1}$ は有限個のアフィン関数であるから，それらすべての対に関する $\succ$ の判定は，ある共通の $M^\dagger$ 以降，数値比較と一致する(第4.5節の議論と同様)．$C_k(M)$ は $k$ に関して(各項の傾きが $\ge0$ であるから)$M$ について非減少であり，$r\in V_\infty$ より $w_r\succ0$ であるから，$k^\ast$ が $k<k_0$ の範囲で存在する場合は $k^\ast\ge1$ である．
 
-(ii)：$\mathrm{Eligible}$ 全体をフリップさせても累積容量が $w_r(M)$ に届かない($M\ge M^\dagger$)場合，$x_{B,r}$ をどのようにフリップ・ピボットしても $d$ の方向に $w_r(M)$ だけ動かすことはできないから，行 $r$ の逸脱を解消する主実行可能解は存在せず，問題~\eqref{eq:lpM}は実行不可能である．
+(i)：数値として $M\ge M^\dagger$ を固定して逐次的に比検定・フリップ・ピボットを行う古典的BFRTは，$\theta$ の昇順に候補を走査しながら，$\mathrm{Flip}$ に属する候補についてはフリップ容量の累積が $w_r(M)$ に達するまでフリップを続け，達した時点，あるいは $\mathrm{Eligible}\setminus\mathrm{Flip}$ に属する候補に到達した時点のいずれか早い方で，その候補を加入変数として通常のピボットを行う，という手続きに他ならない．$M\ge M^\dagger$ のもとでは $\succ$ による判定と数値比較が一致するから，この手続きはちょうど $k^\ast$ を用いた上記の判定に一致する．
+
+(ii)：$k_0=p+1$(すなわち $\mathrm{Eligible}$ がすべて $\mathrm{Flip}$ に属する)場合において，それら全体をフリップさせても累積容量が $w_r(M)$ に届かない($M\ge M^\dagger$)ならば，$x_{B,r}$ をどのようにフリップ・ピボットしても $d$ の方向に $w_r(M)$ だけ動かすことはできないから，行 $r$ の逸脱を解消する主実行可能解は存在せず，問題~\eqref{eq:lpM}は実行不可能である．
 \end{proof}
 
 フリップ $j_1,\dots,j_{k^\ast-1}$ は基底 $B$ を変更しない(すべて非基底のまま反対側の上下限へ移るだけである)．基底値 $x_B(M)=p-Mg$(補題~\ref{lem:affine})は，各フリップにより
@@ -697,11 +743,11 @@ $k\ge k_0$ に関する帰納法で示す．$k=k_0$ では仮定により成立�
 
 まず，補題~\ref{lem:affine}において $\delta=0$ であるから $x_N(M)\equiv x_N^0$ であり，したがって $g=A_B^{-1}A_N\delta=0$，すなわち $x_B(M)\equiv p$ は $M$ に依存しない定数である．
 
-各行 $i$ について，$\beta(i)$ が非有界な側を持つ場合(たとえば $l_{\beta(i)}=-\infty$)，対応する逸脱量 $v_i^-(M)=\hat l_{\beta(i)}(M)-x_{B,i}(M)=(-M)-p_i$ は傾き $-1$ を持ち，$M\to\infty$ で $-\infty$ に発散するから，いかなる $M^\dagger$ に対しても $M\ge M^\dagger$ で $v_i^-\succ0$ となることはない．一方，$\beta(i)$ の真に有限な側に対応する逸脱量は，$x_{B,i}(M)=p_i$ が定数であることと合わせて，やはり $M$ に依存しない定数である($u_{\beta(i)}=+\infty$ の場合も対称に同様)．したがって，脱退行 $r$ の逸脱量 $w_r(M)=a_rM+b_r$ は傾き $a_r=0$ の定数(通常の実数)である．
+各行 $i$ について，$\beta(i)\in J_L\cap S$ である場合，対応する逸脱量 $v_i^-(M)=\hat l_{\beta(i)}(M)-x_{B,i}(M)=(-M)-p_i$ は傾き $-1$ を持ち，$M\to\infty$ で $-\infty$ に発散するから，いかなる $M^\dagger$ に対しても $M\ge M^\dagger$ で $v_i^-\succ0$ となることはない．$\beta(i)\in J_L\setminus S$ である場合は，$\hat l_{\beta(i)}=-\infty$ であるから $v_i^-$ は定義上決して $\succ0$ にならない(命題~\ref{prop:s-confinement}の証明と同じ理由)．一方，$\beta(i)$ の真に有限な側に対応する逸脱量は，$x_{B,i}(M)=p_i$ が定数であることと合わせて，やはり $M$ に依存しない定数である($\beta(i)\in J_U\cap S$ あるいは $J_U\setminus S$ の場合も対称に同様)．したがって，脱退行 $r$ の逸脱量 $w_r(M)=a_rM+b_r$ は傾き $a_r=0$ の定数(通常の実数)である．
 
 (i) \textbf{脱退変数が真に有限な境界に固定されること}：$w_r(M)$ が定数であることから，$r$ は必ず $\beta(r)$ の真に有限な側の逸脱によって選ばれる(非有界側の逸脱量は上で見た通り傾き $-1$ で発散し，$\succ0$ になり得ない)．Step~2(d)のピボットにより，$\beta(r)$ はその真に有限な境界に固定されて非基底化する．
 
-(ii) \textbf{BFRTのフリップが非有界側の変数を対象としないこと}：BFRTを用いる場合，第4.6節の記法で，各候補 $j_i$ の寄与 $\mathrm{cap}_{j_i}(M)=|\hat\alpha_{j_i}|(w_{j_i}+s_{j_i}M)$ は，$s_{j_i}=1$(片側のみ非有界)ならば傾き $|\hat\alpha_{j_i}|>0$ を持つ．累積容量 $C_k(M)=\sum_{i\le k}\mathrm{cap}_{j_i}(M)$ は各項の傾きが非負であるから，$s_{j_i}=1$ なる候補 $j_i$ が累積に加わった時点以降，$C_k(M)$($k\ge i$)は傾き正となり $M\to\infty$ で $+\infty$ に発散する．一方 $w_r(M)$ は(i)で見た通り定数であるから，$C_i(M)\succ w_r(M)$ が成り立ち，命題~\ref{prop:bfrt}の $k^\ast:=\min\{k:\neg(w_r\succ C_k)\}$ の定義より $k^\ast\le i$ である．すなわち，$s_{j_i}=1$ なる候補 $j_i$ は，実際にフリップされる集合 $\{j_1,\dots,j_{k^\ast-1}\}$ には決して含まれない．したがって，フリップされる非基底変数はすべて両側有限($s_j=0$)な変数に限られ，フリップ後もその変数は(もう一方の，やはり真に有限な境界に移るだけなので)$\delta_j=0$ のままである．また，加入変数 $q=j_{k^\ast}$ が $s_q=1$ である場合も，$q$ はフリップされるのではなく通常のピボットによって基底化するから，非基底集合から除かれる．
+(ii) \textbf{BFRTのフリップが $S$ 以外の変数を対象としないこと}：命題~\ref{prop:s-confinement}により，$\mathrm{Eligible}\setminus\mathrm{Flip}$ に属する候補($(J_L\cup J_U)\setminus S$ に属する変数)は，非基底である限り常にその真に有限な側にあり，かつ第4.6節の規定によりフリップの対象にすらならない(仮にこれが加入変数 $q=j_{k_0}$ として選ばれても，通常のピボットで基底化するのみであり，非基底集合から除かれる)．残るは $\mathrm{Flip}=J_{\mathrm{box}}\cup S$ に属する候補である．第4.6節の記法で，各候補 $j_i\in\mathrm{Flip}$ の寄与 $\mathrm{cap}_{j_i}(M)=|\hat\alpha_{j_i}|(w_{j_i}+s_{j_i}M)$ は，$s_{j_i}=1$($j_i\in S$)ならば傾き $|\hat\alpha_{j_i}|>0$ を持つ．累積容量 $C_k(M)=\sum_{i\le k,\,j_i\in\mathrm{Flip}}\mathrm{cap}_{j_i}(M)$ は各項の傾きが非負であるから，$S$ に属する候補 $j_i$ が累積に加わった時点以降，$C_k(M)$($k\ge i$)は傾き正となり $M\to\infty$ で $+\infty$ に発散する．一方 $w_r(M)$ は(i)で見た通り定数であるから，$C_i(M)\succ w_r(M)$ が成り立ち，命題~\ref{prop:bfrt}の $k^\ast$ の定義より $k^\ast\le i$ である．すなわち，$S$ に属する候補 $j_i$ は，実際にフリップされる集合 $\{j_1,\dots,j_{k^\ast-1}\}$ には決して含まれない．したがって，フリップされる非基底変数はすべて $J_{\mathrm{box}}$ に属する(両側真に有限，$s_j=0$)変数に限られ，フリップ後もその変数は(もう一方の，やはり真に有限な境界に移るだけなので)$\delta_j=0$ のままである．また，加入変数 $q=j_{k^\ast}$ が $S$ に属する場合も，$q$ はフリップされるのではなく通常のピボットによって基底化するから，非基底集合から除かれる．
 
 (iii) \textbf{結論}：ピボットで基底化する加入変数 $q$ は非基底集合から除かれ，(i)によりピボットで非基底化する $\beta(r)$ は真に有限な境界に固定され，(ii)によりフリップされる変数は両側有限なものに限られてフリップ後も $\delta_j=0$ のままであり，その他の非基底変数はこの反復によって状態を変えない．したがって $(B^{(k+1)},\eta^{(k+1)})$ の非基底変数もすべて $\delta_j=0$ である．
 \end{proof}
@@ -755,7 +801,7 @@ Algorithm~\ref{alg:extended}は3つの局面からなる．\textbf{(I) 前処理
 \State 残る各 $j$ に対しシフト量 $t_j$ を計算し，$A,b,l,u \gets A,\ b-At,\ l-t,\ u-t$ と置き換える \Comment{第4.1節}
 
 \Statex \textbf{(II) 主反復}
-\State $B\gets\{n+1,\dots,n+m\}$(スラック添字)；各 $j=1,\dots,n$ について $\eta(j)\gets L$ if $c_j\ge0$, $U$ if $c_j<0$ \Comment{計算なしに双対実行可能，命題~\ref{prop:dual-feasible-init}，第4.3節}
+\State $S\gets\{j\in J_L:c_j>0\}\cup\{j\in J_U:c_j<0\}$；$B\gets\{n+1,\dots,n+m\}$(スラック添字)；各 $j=1,\dots,n$ について，$c_j>0$ または($c_j=0$ かつ $j\notin J_L$)なら $\eta(j)\gets L$，そうでなければ $\eta(j)\gets U$ \Comment{計算なしに双対実行可能，命題~\ref{prop:dual-feasible-init}，第4.3節；$M$ は $S$ に属する変数についてのみ有界化(第4.2節)}
 \Repeat
   \State $V_\infty \gets \{\,i : v_i^-\succ0 \text{ または } v_i^+\succ0\,\}$ \Comment{逸脱行の集合，(a$'$)，第4.5節}
   \If{$V_\infty=\emptyset$}
@@ -768,11 +814,14 @@ Algorithm~\ref{alg:extended}は3つの局面からなる．\textbf{(I) 前処理
     \State \Return 「元問題は実行不可能」 \Comment{命題~\ref{prop:trichotomy}(i)}
   \EndIf
   \State $\mathrm{Eligible}$ を $\theta_j:=\hat c_j/|\hat\alpha_j|$ の昇順に $j_1,\dots,j_p$ と並べる(同順位は第4.7節の拡張辞書式順序で解消) \Comment{BFRT，第4.6節}
-  \State $C_0\gets(0,0)$(傾き，切片の係数対)；$k^\ast\gets$ 未定義
+  \State $C\gets(0,0)$(傾き，切片の係数対)；$k^\ast\gets$ 未定義
   \For{$k=1,\dots,p$}
-    \State $C_k \gets C_{k-1} + \bigl(|\hat\alpha_{j_k}|s_{j_k},\ |\hat\alpha_{j_k}|w_{j_k}\bigr)$ \Comment{$\mathrm{cap}_{j_k}$ の係数を加算}
-    \If{$k^\ast$ が未定義 \textbf{かつ} $\neg(w_r\succ C_k)$}
-      \State $k^\ast\gets k$
+    \If{$j_k\notin J_{\mathrm{box}}\cup S$}
+      \State $k^\ast\gets k$；\textbf{break} \Comment{$(J_L\cup J_U)\setminus S$：フリップ不可(命題~\ref{prop:s-confinement})，直ちに加入変数とする}
+    \EndIf
+    \State $C \gets C + \bigl(|\hat\alpha_{j_k}|s_{j_k},\ |\hat\alpha_{j_k}|w_{j_k}\bigr)$ \Comment{$\mathrm{cap}_{j_k}$ の係数を加算}
+    \If{$\neg(w_r\succ C)$}
+      \State $k^\ast\gets k$；\textbf{break}
     \EndIf
   \EndFor
   \If{$k^\ast$ が未定義}
