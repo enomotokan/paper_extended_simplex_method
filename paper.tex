@@ -50,7 +50,7 @@
 \]
 と配置するだけで，\emph{計算なしに}双対実行可能な初期基底が得られる．ただしこの配置は，配置先の上下限が有限であることを要する．非有界な上下限を大きな定数で置き換えてこの障害を除く構成は，双対単体法のフェーズ1の一つとして知られ，双対問題に対する大$M$法と位置づけられている\cite{wolfe1965,koberstein2005,koberstein2007,huang2021}．ただし，$M$ を数値として固定する限り，$M$ が十分大きい保証がないことと，$M$ の混入による数値的不安定性という，主問題の大$M$法と同じ問題が残る．実際，Koberstein\cite{koberstein2005}は，停止時に人工上下限に非基底変数が残った場合に $M$ を定数倍して再開し，$M$ が閾値を超えたら非有界と宣言する実装を述べたうえで，適切な $M$ が問題に強く依存し，小さすぎれば再開を繰り返し，大きすぎれば数値的な問題を招くことを理由に，この方法を最終的な実装から外している．本稿では，有界化した問題に対する双対単体法を，$M$ を数値として固定せずに $M\to+\infty$ の極限で記号的に実行・解析することで，これらの問題を解消する．本稿の主要な貢献は，実用的な双対単体法に不可欠な最急辺規則・Devex規則，Bound Flipping Ratio Test (BFRT)，および停止時に人工上下限に残った非基底変数を除去する後処理(クロスオーバー手続きの primal push\cite{megiddo1991}に相当する)を，いずれも記号的な $M$ のもとで厳密に実行できるよう整合させた点にある(第\ref{sec:contribution}節)．
 
-本稿の構成は次の通りである．第\ref{sec:contribution}節で既知の結果と本稿の貢献との区別を明示したのち，第\ref{sec:prelim}節で上下限制約付き双対単体法を整理し，第\ref{sec:difficulty}節で初期基底構築の困難性と，それが自明となる特殊なクラスを確認する．第\ref{sec:method}節では，非有界変数を $M$ で有界化した上でのゼロ固定スラック変数による自明な初期基底とアルゴリズムを記述し(第\ref{sec:shift-preprocess}--\ref{sec:M-algorithm}節)，$M\to+\infty$ での挙動を記号的に解析して，元問題の実行不可能性・非有界性・有限最適解の存在の判別と，最適性を保つ後処理，最急辺規則・Devex規則の $M\to\infty$ 版を与える(第\ref{sec:M-infty}節)．続けて，この構成を双対問題に対する大$M$法として解釈し(第\ref{sec:dual-view}節)，BFRT との融合(第\ref{sec:bfrt}節)，非有界境界への非復帰(第\ref{sec:no-return}節)，辞書式規則による巡回防止(第\ref{sec:anticycling}節)を示し，第\ref{sec:summary}節でこれらを統合したアルゴリズムを与える．
+本稿の構成は次の通りである．第\ref{sec:contribution}節で既知の結果と本稿の貢献との区別を明示したのち，第\ref{sec:prelim}節で上下限制約付き双対単体法を整理し，第\ref{sec:difficulty}節で初期基底構築の困難性と，それが自明となる特殊なクラスを確認する．第\ref{sec:method}節では，非有界変数を $M$ で有界化した上でのゼロ固定スラック変数による自明な初期基底とアルゴリズムを記述し(第\ref{sec:shift-preprocess}--\ref{sec:M-algorithm}節)，$M\to+\infty$ での挙動を記号的に解析して，元問題の実行不可能性・非有界性・有限最適解の存在の判別と，最適性を保つ後処理，最急辺規則・Devex規則の $M\to\infty$ 版を与える(第\ref{sec:M-infty}節)．続けて，BFRT との融合(第\ref{sec:bfrt}節)，非有界境界への非復帰(第\ref{sec:no-return}節)，辞書式規則による巡回防止(第\ref{sec:anticycling}節)を示す．さらに，辞書式比較の2つの成分が主反復で同時には効かず，反復が傾き問題と切片問題を順に解く2つの局面に分かれることを示し(第\ref{sec:two-phase}節)，この構成を双対問題に対する大$M$法および2段階法として解釈したうえで(第\ref{sec:dual-view}節)，第\ref{sec:summary}節で，これらを統合し辞書式比較を用いずに3段階で実行するアルゴリズムを与える．
 
 \tableofcontents
 
@@ -63,7 +63,7 @@
 第\ref{sec:prelim}節の上下限制約付き双対単体法は，自由変数を非基底のまま値 $0$ に置く状態 $Z$ の扱いを含め，古典的な双対単体法\cite{lemke1954,maros2003}を本稿の記法で整理し直したものである．第\ref{sec:difficulty}節で扱う2段階法・大$M$法・クラッシュ手続き，および有界変数問題などで全スラック基底が自明に双対実行可能となることも，いずれも既知の事実である．これらは後の議論の前提として，また本稿の手法が解消する障害(コストの符号が指し示す側の上下限が非有界であること)を明確にする目的で述べる．同様に，非有界な上下限を有限な $\pm M$ に置き換える有界化(第\ref{sec:truncation}節)は，双対単体法のフェーズ1における人工上下限法(artificial bounds method)として知られており，主単体法に対する composite simplex 法\cite{wolfe1965}の双対版，すなわち双対問題に対する大$M$法にあたる\cite{koberstein2005,koberstein2007,huang2021}(この双対性は第\ref{sec:dual-view}節で整理する)．人工上下限を与えた変数が基底に入った時点で元の上下限に戻す扱いや，両側有限な変数を反対側の上下限へフリップして双対実行可能にする扱い，BFRT を併用して双対フェーズ2を実行することも，数値の $M$ を用いる実装において既に述べられている\cite{koberstein2005}．本稿の第\ref{sec:M-infty}節で，非有界な側の逸脱量が $M$ について傾き $-1$ を持ち脱退行として選ばれないことは，この扱いを記号的な $M$ のもとで述べ直したものにあたる．値を $0$ に固定したスラック変数による全スラック基底(第\ref{sec:init-basis}節)も，それ自体は単純な構成である．本稿の新規性はこれらを個別に用いることにではなく，$M\to+\infty$ の記号的な解析と組み合わせる点にある．
 
 \paragraph{既知の枠組みから従う基礎的事項(第\ref{sec:M-infty}節，第\ref{sec:dual-view}節，第\ref{sec:no-return}節，第\ref{sec:anticycling}節)．}
-組合せ的状態 $(B,\eta)$ を固定すると基底解・逸脱量が $M$ のアフィン関数となり，判定・選択が係数対の辞書式比較に帰着すること(補題~\ref{lem:affine}，命題~\ref{prop:consistency})は，$M$ を非アルキメデス的な無限大として扱う大$M$法\cite{cococcioni2021}の発想を，第\ref{sec:dual-view}節の双対性を介して人工上下限法に移したものである．停止時の傾き $z_1$ の符号による元問題の3通りの場合の判別(命題~\ref{prop:trichotomy})も，大$M$法の古典的な判定を双対問題に適用したものにあたる．また，$\delta=0$ に達して以降の反復が古典的双対単体法に一致すること(命題~\ref{prop:no-return})や，比検定に対する古典的な辞書式規則による巡回防止(第\ref{sec:anticycling}節)，さらに自由変数を分割・消去せずに状態 $Z$ のまま初期配置・BFRT・後処理・巡回防止の各段階で扱えること(式~\eqref{eq:init-status}，注~\ref{rem:state-F})は，本稿の枠組みを完結させるために必要な確認である．停止時に人工上下限 $\pm M$ に置かれた非基底変数を，目的関数値と主・双対の実行可能性を保ったまま主比検定で1つずつ除去する後処理(補題~\ref{lem:cleanup})も，被約費用 $0$ の superbasic 変数を上下限へ動かすクロスオーバー手続きの primal push\cite{megiddo1991,bixby1994,andersen1996}と同じ構造を持つ(注~\ref{rem:crossover})．これらは本稿の議論の土台として証明を与えるが，主要な貢献とは位置づけない．
+組合せ的状態 $(B,\eta)$ を固定すると基底解・逸脱量が $M$ のアフィン関数となり，判定・選択が係数対の辞書式比較に帰着すること(補題~\ref{lem:affine}，命題~\ref{prop:consistency})は，$M$ を非アルキメデス的な無限大として扱う大$M$法\cite{cococcioni2021}の発想を，第\ref{sec:dual-view}節の双対性を介して人工上下限法に移したものである．停止時の傾き $z^1$ の符号による元問題の3通りの場合の判別(命題~\ref{prop:trichotomy})も，大$M$法の古典的な判定を双対問題に適用したものにあたる．また，$x_N^1=0$ に達して以降の反復が古典的双対単体法に一致すること(命題~\ref{prop:no-return})や，比検定に対する古典的な辞書式規則による巡回防止(第\ref{sec:anticycling}節)，さらに自由変数を分割・消去せずに状態 $Z$ のまま初期配置・BFRT・後処理・巡回防止の各段階で扱えること(式~\eqref{eq:init-status}，注~\ref{rem:state-F})は，本稿の枠組みを完結させるために必要な確認である．停止時に人工上下限 $\pm M$ に置かれた非基底変数を，目的関数値と主・双対の実行可能性を保ったまま主比検定で1つずつ除去する後処理(補題~\ref{lem:cleanup})も，被約費用 $0$ の superbasic 変数を上下限へ動かすクロスオーバー手続きの primal push\cite{megiddo1991,bixby1994,andersen1996}と同じ構造を持つ(注~\ref{rem:crossover})．これらは本稿の議論の土台として証明を与えるが，主要な貢献とは位置づけない．
 
 \paragraph{本稿の貢献．}
 本稿の貢献は，人工上下限法の $M$ を数値として固定せず記号的に扱ったうえで，それを実用的な双対単体法の構成要素と厳密に整合させることにある．具体的には次の点を示す．
@@ -130,24 +130,24 @@
 \begin{enumerate}[label=(\roman*)]
 \item \textbf{脱退変数の選択}：$x_B$ のうち上下限を逸脱している行 $r$ を一つ選ぶ．逸脱量が最大の行を選ぶのが典型的である(退化に対しては Bland 則\cite{bland1977}等の巡回防止規則を援用する)．逸脱の方向を
   \[
-    d =
+    \rho =
     \begin{cases}
       +1 & (x_{B,r} < l_{\beta(r)}, \text{増加させたい})\\
       -1 & (x_{B,r} > u_{\beta(r)}, \text{減少させたい})
     \end{cases}
   \]
   とおく．ここで $\beta(r)$ は行 $r$ に対応する基底変数の添字である．$x_{B,r}$ は真に有限な実数であるから，これが非有界な境界($l_{\beta(r)}=-\infty$ または $u_{\beta(r)}=+\infty$)を上回る／下回ることはなく，したがって $\beta(r)$ は必ず真に有限な側の境界を持つ(とくに自由変数が脱退行として選ばれることはない)．
-\item \textbf{ピボット行の計算}：$\alpha^\top := e_r^\top A_B^{-1}A_N$(タブローの行 $r$ の非基底部分)を計算する．各非基底 $j$ に対し符号 $\sigma_j$ を，$\eta(j)=L$ なら $+1$，$\eta(j)=U$ なら $-1$，$\eta(j)=Z$ なら $d\alpha_j$ と反対の符号($\alpha_j\neq0$ である限り一意に定まる；このとき自動的に $d\hat\alpha_j<0$ となる)と定め，$\hat\alpha_j:=\sigma_j\alpha_j$，$\hat c_j:=\sigma_j\bar c_j$ とおく．双対実行可能性より，$\eta(j)\in\{L,U\}$ では $\hat c_j\ge0$ であり，$\eta(j)=Z$ では $\bar c_j=0$ ゆえ $\hat c_j=0$ である．
+\item \textbf{ピボット行の計算}：$\alpha^\top := e_r^\top A_B^{-1}A_N$(タブローの行 $r$ の非基底部分)を計算する．各非基底 $j$ に対し符号 $\sigma_j$ を，$\eta(j)=L$ なら $+1$，$\eta(j)=U$ なら $-1$，$\eta(j)=Z$ なら $\rho\alpha_j$ と反対の符号($\alpha_j\neq0$ である限り一意に定まる；このとき自動的に $\rho\hat\alpha_j<0$ となる)と定め，$\hat\alpha_j:=\sigma_j\alpha_j$，$\hat c_j:=\sigma_j\bar c_j$ とおく．双対実行可能性より，$\eta(j)\in\{L,U\}$ では $\hat c_j\ge0$ であり，$\eta(j)=Z$ では $\bar c_j=0$ ゆえ $\hat c_j=0$ である．
 \item \textbf{加入可能集合と比検定}：加入可能な非基底変数の集合を
   \[
-    \mathrm{Eligible} := \{\, j\in N : l_j<u_j,\ d\,\hat\alpha_j < 0 \,\}
+    \mathrm{Eligible} := \{\, j\in N : l_j<u_j,\ \rho\,\hat\alpha_j < 0 \,\}
   \]
   と定める($l_j=u_j$ なる固定変数を除く理由は注~\ref{rem:fixed}を参照．状態 $Z$ の変数は，$\sigma_j$ の取り方により $\alpha_j\neq0$ である限りつねに加入可能である)．$\mathrm{Eligible}=\emptyset$ ならば，現在の問題(の上下限制約のもとで)は実行不可能であり，アルゴリズムは停止する．そうでなければ，
   \[
     q \in \operatorname*{arg\,min}_{j\in \mathrm{Eligible}} \frac{\hat c_j}{|\hat\alpha_j|}
   \]
   を加入変数として選ぶ．状態 $Z$ の候補は $\hat c_j=0$ であるから，この最小化において常に最優先(比 $0$)で選ばれる．
-\item \textbf{ピボット}：$\beta(r)$ を非基底化し，$d=+1$ ならば $l_{\beta(r)}$ に，$d=-1$ ならば $u_{\beta(r)}$ に固定する((i)により $\beta(r)$ は必ず真に有限な側を持つ)．$q$ を基底化し，基底 $B$，逆行列 $A_B^{-1}$，基底解 $x_B$，非基底の状態 $\eta$ を更新する．
+\item \textbf{ピボット}：$\beta(r)$ を非基底化し，$\rho=+1$ ならば $l_{\beta(r)}$ に，$\rho=-1$ ならば $u_{\beta(r)}$ に固定する((i)により $\beta(r)$ は必ず真に有限な側を持つ)．$q$ を基底化し，基底 $B$，逆行列 $A_B^{-1}$，基底解 $x_B$，非基底の状態 $\eta$ を更新する．
 \end{enumerate}
 
 この手続きは，各反復で双対実行可能性を保ったまま，退化がなければ双対目的関数を真に改善するため，有限回の反復で「すべての行が上下限を満たす($x_B$ が実行可能)」か「$\mathrm{Eligible}=\emptyset$(実行不可能)」のいずれかに到達する．前者に至れば，得られた $(B,\eta,x)$ は主・双対ともに実行可能であるから，問題~\eqref{eq:lp}の最適解である．
@@ -205,7 +205,7 @@
 
 いずれの方法も，補助変数の追加や十分大きい $M$ の選択という数値的に微妙な判断，あるいはヒューリスティックな規則に基づく非自明な計算を要するという点で，「計算なしに得られる自明な初期基底」からは程遠い．とりわけ大$M$法は，$M$ の取り方次第で数値的な不安定性を招くことが古くから指摘されている．
 
-もっとも，大$M$法のこの欠点は $M$ を具体的な数値として固定することに由来するものであり，手法の構造そのものに由来するものではない．実際，大$M$法の合成目的関数は，固定した基底解に対して $M$ のアフィン関数 $z_1M+z_0$($z_1=\mathbf 1^\top a$，$z_0=c^\top x$)となるから，十分大きな $M$ における比較は係数対 $(z_1,z_0)$ の辞書式比較に帰着する．すなわち大$M$法は，十分大きな $M$ に対して，$\mathbf 1^\top a$ を $c^\top x$ に優先させる辞書式(preemptive)最適化と等価である\cite{sherali1983}．この観点を推し進めれば，$M$ を\emph{記号的に}無限大として扱うことで，$M$ の値を選ぶことなく大$M$法を実行できる．Cococcioni と Fiaschi\cite{cococcioni2021}は，$M$ を非アルキメデス的な無限大数として扱い，$M$ の各べきの係数を辞書式に比較しながら単体法を実行することで，この方向を具体的なアルゴリズムとして実現している．
+もっとも，大$M$法のこの欠点は $M$ を具体的な数値として固定することに由来するものであり，手法の構造そのものに由来するものではない．実際，大$M$法の合成目的関数は，固定した基底解に対して $M$ のアフィン関数 $z^1M+z^0$($z^1=\mathbf 1^\top a$，$z^0=c^\top x$)となるから，十分大きな $M$ における比較は係数対 $(z^1,z^0)$ の辞書式比較に帰着する．すなわち大$M$法は，十分大きな $M$ に対して，$\mathbf 1^\top a$ を $c^\top x$ に優先させる辞書式(preemptive)最適化と等価である\cite{sherali1983}．この観点を推し進めれば，$M$ を\emph{記号的に}無限大として扱うことで，$M$ の値を選ぶことなく大$M$法を実行できる．Cococcioni と Fiaschi\cite{cococcioni2021}は，$M$ を非アルキメデス的な無限大数として扱い，$M$ の各べきの係数を辞書式に比較しながら単体法を実行することで，この方向を具体的なアルゴリズムとして実現している．
 
 ただし，これらはいずれも主問題に対する大$M$法であり，各行への人工変数の導入と，それを基底から追い出して主実行可能性を回復する計算(実質的には2段階法のフェーズ1)を依然として必要とする．一方，双対問題に対する大$M$法である人工上下限法\cite{wolfe1965,koberstein2005,koberstein2007,huang2021}は，人工変数を陽に導入することなく，非有界な上下限を $\pm M$ に置き換えるだけで自明な双対実行可能基底を与えるが，従来は $M$ を具体的な数値として固定して用いられ，主問題の大$M$法と同じ数値的な問題を抱える．とくに，停止時に人工上下限に非基底変数が残った場合，それが $M$ の不足によるのか元問題の非有界性によるのかを区別できないため，$M$ を増やして再開し，閾値を超えたら非有界と宣言するという発見的な判定に頼ることになる\cite{koberstein2005}．本稿の着眼は，「$M$ の値を固定せず，$M$ に関する係数の辞書式比較によって $M\to+\infty$ の挙動を厳密に追う」というこの発想を，双対問題に対する大$M$法，すなわち変数の\emph{上下限}としての $M$ に適用することにある．
 
@@ -350,7 +350,7 @@
 
 いずれの規則で $r$ を選んだ場合も，逸脱の方向は
 \[
-  d \ :=\
+  \rho \ :=\
   \begin{cases}
     +1 & (x_{B,r} < \hat l_{\beta(r)}, \ \text{増加させたい})\\
     -1 & (x_{B,r} > \hat u_{\beta(r)}, \ \text{減少させたい})
@@ -360,7 +360,7 @@
 
 \item \textbf{ピボット行の計算と比検定．} 第\ref{sec:dual-simplex}節(ii)と同様に $\alpha^\top := e_r^\top A_B^{-1}A_N$，$\sigma_j$，$\hat\alpha_j:=\sigma_j\alpha_j$，$\hat c_j:=\sigma_j\bar c_j\,(\ge0)$ を定め，加入可能な非基底変数の集合
 \[
-  \mathrm{Eligible} \ :=\ \{\, j\in N : \hat l_j<\hat u_j,\ d\,\hat\alpha_j < 0 \,\}
+  \mathrm{Eligible} \ :=\ \{\, j\in N : \hat l_j<\hat u_j,\ \rho\,\hat\alpha_j < 0 \,\}
 \]
 を計算する(固定変数を除く．次の注~\ref{rem:fixed})．$\mathrm{Eligible}=\emptyset$ ならば，現在の $M$ のもとで問題~\eqref{eq:lpM}は実行不可能であり，アルゴリズムを終了する．そうでなければ
 \[
@@ -368,7 +368,7 @@
 \]
 により加入変数 $q$ を選ぶ(状態 $Z$ の候補は比 $0$ で最優先される)．
 
-\item \textbf{ピボット．} $\beta(r)$ を非基底化し，$d=+1$ ならば $\hat l_{\beta(r)}$ に，$d=-1$ ならば $\hat u_{\beta(r)}$ に固定する．$q$ を基底化し，基底 $B$，逆行列 $A_B^{-1}$，基底解 $x_B$，非基底値 $x_N$，非基底の状態 $\eta$ を更新して(a)に戻る．
+\item \textbf{ピボット．} $\beta(r)$ を非基底化し，$\rho=+1$ ならば $\hat l_{\beta(r)}$ に，$\rho=-1$ ならば $\hat u_{\beta(r)}$ に固定する．$q$ を基底化し，基底 $B$，逆行列 $A_B^{-1}$，基底解 $x_B$，非基底値 $x_N$，非基底の状態 $\eta$ を更新して(a)に戻る．
 \end{enumerate}
 
 \begin{remark}[固定変数の除外]
@@ -382,7 +382,7 @@ $\hat l_j=\hat u_j$ なる非基底変数 $j$(固定変数)は，状態 $L,U$ �
 \label{sec:M-infty}
 
 \paragraph{動機．}
-第\ref{sec:general-difficulty}節で見たように，大$M$法では，十分大きな $M$ での比較が係数対 $(z_1,z_0)$($z_1=\mathbf 1^\top a$ はフェーズ1，$z_0=c^\top x$ はフェーズ2の目的関数値)の辞書式比較に帰着し，これは2段階法の手続きそのものである(大$M$法は $M\to+\infty$ の極限で2段階法と一致する\cite{chvatal1983,bertsimas1997})．本稿は $M$ を非有界変数の\emph{上下限}として導入しているが(第\ref{sec:truncation}節)，これは双対問題におけるペナルティ係数にあたり(第\ref{sec:dual-view}節)，同じく $M\to+\infty$ の極限を係数の辞書式比較として直接扱うことができる．
+第\ref{sec:general-difficulty}節で見たように，大$M$法では，十分大きな $M$ での比較が係数対 $(z^1,z^0)$($z^1=\mathbf 1^\top a$ はフェーズ1，$z^0=c^\top x$ はフェーズ2の目的関数値)の辞書式比較に帰着し，これは2段階法の手続きそのものである(大$M$法は $M\to+\infty$ の極限で2段階法と一致する\cite{chvatal1983,bertsimas1997})．本稿は $M$ を非有界変数の\emph{上下限}として導入しているが(第\ref{sec:truncation}節)，これは双対問題におけるペナルティ係数にあたり(第\ref{sec:dual-view}節)，同じく $M\to+\infty$ の極限を係数の辞書式比較として直接扱うことができる．
 
 Step~2(c)(d)は，現在の基底 $B$ と非基底の状態 $\eta$ のみから定まり，$M$ の数値には依存しない．$M$ が関与するのは，$\hat l,\hat u$ と，それに応じて定まる $x_N,x_B$，およびStep~2(a)(b)の判定・選択のみである．以下では，組合せ的状態 $(B,\eta)$ を固定したまま，これらが $M$ のアフィン関数になることを用いて解析する．
 
@@ -399,29 +399,31 @@ Step~2(c)(d)は，現在の基底 $B$ と非基底の状態 $\eta$ のみから�
     0 & (\eta(j)=Z)
   \end{cases}
 \]
-であるから，$x_N(M) = x_N^0 + M\delta$ と書ける．ここで $x_N^0\in\R^{|N|}$，$\delta\in\{-1,0,1\}^{|N|}$ は $(B,\eta)$ のみに依存し $M$ に依存しない定ベクトルで，$\delta_j=-1\,(\eta(j)=L,l_j=-\infty)$，$\delta_j=+1\,(\eta(j)=U,u_j=+\infty)$，それ以外(状態 $Z$ を含む)は $\delta_j=0$ である．したがって
+であるから，$x_N(M) = x_N^0 + Mx_N^1$ と書ける．ここで $x_N^0\in\R^{|N|}$，$x_N^1\in\{-1,0,1\}^{|N|}$ は $(B,\eta)$ のみに依存し $M$ に依存しない定ベクトルで，$x_j^1=-1\,(\eta(j)=L,l_j=-\infty)$，$x_j^1=+1\,(\eta(j)=U,u_j=+\infty)$，それ以外(状態 $Z$ を含む)は $x_j^1=0$ である．したがって
 \[
-  x_B(M) \ =\ A_B^{-1}\bigl(b-A_Nx_N(M)\bigr) \ =\ \underbrace{A_B^{-1}(b-A_Nx_N^0)}_{=:p}\ -\ M\underbrace{A_B^{-1}A_N\delta}_{=:g}
+  x_B(M) \ =\ A_B^{-1}\bigl(b-A_Nx_N(M)\bigr) \ =\ \underbrace{A_B^{-1}(b-A_Nx_N^0)}_{=:x_B^0}\ +\ M\underbrace{\bigl(-A_B^{-1}A_Nx_N^1\bigr)}_{=:x_B^1}
 \]
-は $M$ のアフィン関数であり，係数 $p,g\in\R^m$ は $(B,\eta)$ にのみ依存する．
+は $M$ のアフィン関数であり，係数 $x_B^0,x_B^1\in\R^m$ は $(B,\eta)$ にのみ依存する．すなわち $x^0:=(x_N^0,x_B^0)$，$x^1:=(x_N^1,x_B^1)$ とおけば $x(M)=x^0+Mx^1$ である．
 \end{lemma}
+
+以下では一貫して，$M$ のアフィン関数 $f(M)$ の\emph{傾き}($M$ の係数)を上付きの $1$ で，\emph{切片}(定数項)を上付きの $0$ で表し，$f(M)=f^1M+f^0$ と書く．基底解 $x(M)=x^0+Mx^1$ はこの記法に従っている．
 
 同様に，$\hat l_{\beta(i)}(M),\hat u_{\beta(i)}(M)$ も式~\eqref{eq:trunc}よりそれぞれ($l_{\beta(i)}$ または $-M$)，($u_{\beta(i)}$ または $M$)というアフィン関数であるから，Step~2(a)の逸脱量
 \[
   v_i^-(M) := \hat l_{\beta(i)}(M) - x_{B,i}(M), \qquad
   v_i^+(M) := x_{B,i}(M) - \hat u_{\beta(i)}(M)
 \]
-も，補題~\ref{lem:affine}よりいずれも $M$ のアフィン関数である．これを $v_i^-(M)=a_i^-M+b_i^-$，$v_i^+(M)=a_i^+M+b_i^+$ と書く($a_i^\pm,b_i^\pm\in\R$ は $(B,\eta)$ のみに依存する定数)．
+も，補題~\ref{lem:affine}よりいずれも $M$ のアフィン関数である．上の記法に従い，これを $v_i^-(M)=v_i^{-,1}M+v_i^{-,0}$，$v_i^+(M)=v_i^{+,1}M+v_i^{+,0}$ と書く($v_i^{\pm,1},v_i^{\pm,0}\in\R$ は $(B,\eta)$ のみに依存する定数)．
 
 \begin{definition}[アフィン関数の辞書式順序]
-2つのアフィン関数 $f(M)=aM+b$，$g(M)=cM+d$ に対し，
+2つのアフィン関数 $f(M)=f^1M+f^0$，$h(M)=h^1M+h^0$ に対し，
 \[
-  f \ \succ\ g \quad :\Longleftrightarrow\quad a>c,\ \ \text{または}\ \ (a=c\ \text{かつ}\ b>d)
+  f \ \succ\ h \quad :\Longleftrightarrow\quad f^1>h^1,\ \ \text{または}\ \ (f^1=h^1\ \text{かつ}\ f^0>h^0)
 \]
-と定める(すなわち係数ベクトル $(a,b),(c,d)$ の辞書式順序で比較する)．
+と定める(すなわち係数ベクトル $(f^1,f^0),(h^1,h^0)$ の辞書式順序で比較する)．
 \end{definition}
 
-$f\succ g$ ならば，ある $M^\dagger(f,g)>0$ が存在し，すべての $M\ge M^\dagger(f,g)$ で $f(M)>g(M)$ が成り立つ($a\neq c$ なら $M^\dagger=|b-d|/|a-c|$ でよく，$a=c,\,b>d$ なら任意の $M>0$ で成り立つ)．$g\succ f$ の場合も同様であり，$(a,b)=(c,d)$ のときは $f\equiv g$ である．この $\succ$ は有限個のアフィン関数の集合上の全順序を与え，それらすべての対に対する $M^\dagger(f,g)$ の最大値を $M^\dagger$ とおけば，$M\ge M^\dagger$ である限り，数値比較の結果はすべて $\succ$ による比較と一致する．
+$f\succ h$ ならば，ある $M^\dagger(f,h)>0$ が存在し，すべての $M\ge M^\dagger(f,h)$ で $f(M)>h(M)$ が成り立つ($f^1\neq h^1$ なら $M^\dagger=|f^0-h^0|/|f^1-h^1|$ でよく，$f^1=h^1,\,f^0>h^0$ なら任意の $M>0$ で成り立つ)．$h\succ f$ の場合も同様であり，$(f^1,f^0)=(h^1,h^0)$ のときは $f\equiv h$ である．この $\succ$ は有限個のアフィン関数の集合上の全順序を与え，それらすべての対に対する $M^\dagger(f,h)$ の最大値を $M^\dagger$ とおけば，$M\ge M^\dagger$ である限り，数値比較の結果はすべて $\succ$ による比較と一致する．
 
 これを用いて，Step~2(a)(b)を，具体的な $M$ の値を固定せずに次のように書き換えることができる．
 
@@ -431,7 +433,7 @@ $f\succ g$ ならば，ある $M^\dagger(f,g)>0$ が存在し，すべての $M\
 \[
   r \ \in\ \operatorname*{arg\,max}_{i\in V_\infty}{}^{\succ}\, w_i
 \]
-により(辞書式順序 $\succ$ に関する最大元として)脱退行 $r$ を選ぶ．$w_r=v_r^-$ であれば $d=+1$，$w_r=v_r^+$ であれば $d=-1$ とする(両者が等しい場合の同点処理は，添字の小さい方を優先するなど，Bland 則に準じた規則で決定的に定める)．
+により(辞書式順序 $\succ$ に関する最大元として)脱退行 $r$ を選ぶ．$w_r=v_r^-$ であれば $\rho=+1$，$w_r=v_r^+$ であれば $\rho=-1$ とする(両者が等しい場合の同点処理は，添字の小さい方を優先するなど，Bland 則に準じた規則で決定的に定める)．
 \end{enumerate}
 
 \begin{proposition}[十分大きな $M$ での数値計算との一致]
@@ -446,12 +448,12 @@ $V_\infty$ の各元の判定，および $\arg\max^\succ$ による $r$ の選�
 Step~2(c)(d)は $M$ に依存しないから，(a$'$)(b$'$)によって次の状態 $(B',\eta')$ が(数値としての $M$ を固定することなく)一意に定まり，これを繰り返すことで，組合せ的な状態遷移の列 $(B^{(0)},\eta^{(0)}) \to (B^{(1)},\eta^{(1)}) \to \cdots$ が得られる．この列は巡回防止規則(第\ref{sec:anticycling}節)のもとで有限回で停止し，各反復の $M^\dagger$ の最大値を改めて $M^\dagger$ とおけば，$M\ge M^\dagger$ なるすべての $M$ に対して，Step~2を数値計算した場合の反復列はこの組合せ的な遷移列と完全に一致する．すなわち，$M\to+\infty$ での挙動は，係数対の辞書式比較のみによって計算できる．この遷移列の最終状態 $(B^\ast,\eta^\ast)$ が，そのまま十分大きな $M$ に対する\eqref{eq:lpM}の最適基底である．
 
 \paragraph{最適値の $M$ に関するアフィン性と非有界性の判定．}
-状態遷移列が最終状態 $(B^\ast,\eta^\ast)$((a$'$)で $V_\infty=\emptyset$ となる状態)に到達したとする．補題~\ref{lem:affine}の $p,g$($x_B(M)=p-Mg$)と $x_N(M)=x_N^0+M\delta$ を用いると，問題~\eqref{eq:lpM}の最適値は
+状態遷移列が最終状態 $(B^\ast,\eta^\ast)$((a$'$)で $V_\infty=\emptyset$ となる状態)に到達したとする．補題~\ref{lem:affine}の $x(M)=x^0+Mx^1$ を用いると，問題~\eqref{eq:lpM}の最適値は
 \[
   z(M) \ =\ c_B^\top x_B(M) + c_N^\top x_N(M)
-     \ =\ \underbrace{\bigl(c_B^\top p + c_N^\top x_N^0\bigr)}_{=:z_0} \ +\ M\ \underbrace{\bigl(c_N^\top\delta - c_B^\top g\bigr)}_{=:z_1}
+     \ =\ \underbrace{c^\top x^0}_{=:z^0} \ +\ M\ \underbrace{c^\top x^1}_{=:z^1}
 \]
-と，やはり $M$ のアフィン関数として表される．ここで $z_0,z_1\in\R$ は $(B^\ast,\eta^\ast)$ にのみ依存し，$M\ge M^\dagger$ ではこれが問題~\eqref{eq:lpM}の最適値そのものである．\eqref{eq:lpM}の実行可能領域は $M$ に関して単調非減少であるから(第\ref{sec:truncation}節)，$z(M)$ は単調非増加であり，したがって $z_1\le0$ が常に成り立つ．
+と，やはり $M$ のアフィン関数として表される．ここで $z^0,z^1\in\R$ は $(B^\ast,\eta^\ast)$ にのみ依存し，$M\ge M^\dagger$ ではこれが問題~\eqref{eq:lpM}の最適値そのものである．\eqref{eq:lpM}の実行可能領域は $M$ に関して単調非減少であるから(第\ref{sec:truncation}節)，$z(M)$ は単調非増加であり，したがって $z^1\le0$ が常に成り立つ．
 
 \begin{lemma}[実行可能領域の合併]
 \label{lem:union}
@@ -468,74 +470,74 @@ $F:=\{x:Ax=b,\ l\le x\le u\}$(元問題~\eqref{eq:lp}の実行可能領域)と�
 ($\subseteq$)：$x\in F$ を任意にとる．$x$ は(拡大実数値ではなく)有限な実ベクトルであるから $\|x\|_\infty<\infty$．$M\ge\|x\|_\infty$ ととれば，$x_j$ がもともと有限な上下限を持つ座標では $\hat l_j(M)=l_j\le x_j\le u_j=\hat u_j(M)$ がそのまま成り立ち，もともと非有界であった座標では $|x_j|\le M$ より $-M\le x_j\le M$ が成り立つ．ゆえに $x\in F_M$．
 \end{proof}
 
-傾き $z_1$ の符号と停止結果から，元問題の3通りの場合を過不足なく判別できる．
+傾き $z^1$ の符号と停止結果から，元問題の3通りの場合を過不足なく判別できる．
 
 \begin{proposition}[3通りの場合の判別]
 \label{prop:trichotomy}
 組合せ的状態遷移列が，ある $M^\dagger>0$ 以降で最終状態 $(B^\ast,\eta^\ast)$ に到達し，そこで(a$'$)(b$'$)(c)(d)が停止するとする．このとき次が成り立つ．
 \begin{enumerate}[label=(\roman*)]
 \item 停止結果が \textsc{Infeasible} である $\iff$ $F=\emptyset$．
-\item 停止結果が \textsc{Optimal} かつ $z_1<0$ である $\iff$ $F\neq\emptyset$ かつ $\inf_{x\in F}c^\top x=-\infty$(元問題は実行可能かつ非有界)．
-\item 停止結果が \textsc{Optimal} かつ $z_1=0$ である $\iff$ $F\neq\emptyset$ かつ $\inf_{x\in F}c^\top x$ が有限であり，このとき $\inf_{x\in F}c^\top x=z_0$ である．
+\item 停止結果が \textsc{Optimal} かつ $z^1<0$ である $\iff$ $F\neq\emptyset$ かつ $\inf_{x\in F}c^\top x=-\infty$(元問題は実行可能かつ非有界)．
+\item 停止結果が \textsc{Optimal} かつ $z^1=0$ である $\iff$ $F\neq\emptyset$ かつ $\inf_{x\in F}c^\top x$ が有限であり，このとき $\inf_{x\in F}c^\top x=z^0$ である．
 \end{enumerate}
 \end{proposition}
 
 \begin{proof}
-命題~\ref{prop:consistency}とその後の議論により，停止結果は $M\ge M^\dagger$ のすべてで共通であり，$F_M$ は $M\ge M^\dagger$ のすべてで空であるか，すべてで非空かつ最小値 $z(M)=z_0+z_1M$ を持つ．また $M_1\le M_2$ ならば $F_{M_1}\subseteq F_{M_2}$(単調性)である．
+命題~\ref{prop:consistency}とその後の議論により，停止結果は $M\ge M^\dagger$ のすべてで共通であり，$F_M$ は $M\ge M^\dagger$ のすべてで空であるか，すべてで非空かつ最小値 $z(M)=z^0+z^1M$ を持つ．また $M_1\le M_2$ ならば $F_{M_1}\subseteq F_{M_2}$(単調性)である．
 
 (i)：($\Leftarrow$) $F=\emptyset$ ならば，補題~\ref{lem:union}より任意の $M$ で $F_M\subseteq F=\emptyset$．とくに $M\ge M^\dagger$ で \eqref{eq:lpM} は実行不可能であり，停止結果は \textsc{Infeasible} である．
 ($\Rightarrow$) 停止結果が \textsc{Infeasible} であれば $F_{M^\dagger}=\emptyset$．単調性より $M<M^\dagger$ でも $F_M\subseteq F_{M^\dagger}=\emptyset$．ゆえに補題~\ref{lem:union}より $F=\bigcup_M F_M=\emptyset$．
 
 (ii)(iii)：以下，(i)より $F\neq\emptyset$ であるとしてよく，したがって停止結果は \textsc{Optimal} である．補題~\ref{lem:union}と単調性より，任意の $x\in F$ に対し $M_x:=\max(M^\dagger,\|x\|_\infty)$ とおけば $x\in F_{M_x}$(補題~\ref{lem:union}の証明と同じ議論)であり，ゆえに
 \[
-  c^\top x \ \ge\ \min_{F_{M_x}} c^\top x \ =\ z(M_x) \ =\ z_0+z_1M_x .
+  c^\top x \ \ge\ \min_{F_{M_x}} c^\top x \ =\ z(M_x) \ =\ z^0+z^1M_x .
   \tag{$\ast$}
 \]
 
-($z_1<0 \Rightarrow$ 非有界)：$F_M\subseteq F$ より $\inf_{x\in F}c^\top x\le z(M)=z_0+z_1M\to-\infty\ (M\to\infty)$．
+($z^1<0 \Rightarrow$ 非有界)：$F_M\subseteq F$ より $\inf_{x\in F}c^\top x\le z(M)=z^0+z^1M\to-\infty\ (M\to\infty)$．
 
-(非有界 $\Rightarrow z_1<0$)：対偶を示す．$z_1=0$ とする．$F\neq\emptyset$ かつ非有界であれば，任意の $N>0$ に対しある $x_N\in F$ が存在して $c^\top x_N<-N$．$(\ast)$ を $x=x_N$ に適用すると $c^\top x_N\ge z_0+z_1M_{x_N}=z_0$($z_1=0$ のため $M_{x_N}$ の値によらない)．ゆえに $z_0\le c^\top x_N<-N$．$N$ は任意だから $z_0=-\infty$ となるが，$z_0$ は補題~\ref{lem:affine}より有限な実数として定義されているから矛盾．ゆえに $F$ が非有界ならば $z_1\neq0$．先に示した $z_1\le0$ と合わせて $z_1<0$．
+(非有界 $\Rightarrow z^1<0$)：対偶を示す．$z^1=0$ とする．$F\neq\emptyset$ かつ非有界であれば，任意の $N>0$ に対しある $x_N\in F$ が存在して $c^\top x_N<-N$．$(\ast)$ を $x=x_N$ に適用すると $c^\top x_N\ge z^0+z^1M_{x_N}=z^0$($z^1=0$ のため $M_{x_N}$ の値によらない)．ゆえに $z^0\le c^\top x_N<-N$．$N$ は任意だから $z^0=-\infty$ となるが，$z^0$ は補題~\ref{lem:affine}より有限な実数として定義されているから矛盾．ゆえに $F$ が非有界ならば $z^1\neq0$．先に示した $z^1\le0$ と合わせて $z^1<0$．
 
-以上より，$F\neq\emptyset$ のとき「$z_1<0\iff$ 非有界」，したがって($z_1\le0$ の二分法により)「$z_1=0\iff$ 有限な最適値を持つ」が従う．
+以上より，$F\neq\emptyset$ のとき「$z^1<0\iff$ 非有界」，したがって($z^1\le0$ の二分法により)「$z^1=0\iff$ 有限な最適値を持つ」が従う．
 
-最後に，$z_1=0$ の場合に $\inf_{x\in F}c^\top x=z_0$ であることを示す．任意の $x\in F$ に対し，$(\ast)$ で $z_1=0$ を用いれば $c^\top x\ge z_0$．一方，任意に $M\ge M^\dagger$ を一つ固定すると，補題~\ref{lem:union}の証明(($\supseteq$)方向)と同じ議論により，このときの基底解 $(x_B(M),x_N(M))$ は $F_M\subseteq F$ に属し，かつ $c_B^\top x_B(M)+c_N^\top x_N(M)=z(M)=z_0+z_1M=z_0$(最後の等号は $z_1=0$ による)．ゆえに $z_0$ は $F$ 上で実際に達成される下界であり，$z_0=\min_{x\in F}c^\top x$ が従う．
+最後に，$z^1=0$ の場合に $\inf_{x\in F}c^\top x=z^0$ であることを示す．任意の $x\in F$ に対し，$(\ast)$ で $z^1=0$ を用いれば $c^\top x\ge z^0$．一方，任意に $M\ge M^\dagger$ を一つ固定すると，補題~\ref{lem:union}の証明(($\supseteq$)方向)と同じ議論により，このときの基底解 $(x_B(M),x_N(M))$ は $F_M\subseteq F$ に属し，かつ $c_B^\top x_B(M)+c_N^\top x_N(M)=z(M)=z^0+z^1M=z^0$(最後の等号は $z^1=0$ による)．ゆえに $z^0$ は $F$ 上で実際に達成される下界であり，$z^0=\min_{x\in F}c^\top x$ が従う．
 \end{proof}
 
-数値の $M$ を用いる従来の人工上下限法では，停止時に人工上下限に非基底変数が残っていても，それが $M$ の不足によるのか元問題の非有界性によるのかを区別できず，$M$ を増やして再開し，閾値を超えた時点で非有界と宣言するほかなかった\cite{koberstein2005}．命題~\ref{prop:trichotomy}は，この区別が $M$ を記号的に扱えば停止時の傾き $z_1$ の符号だけで厳密に，かつ再開なしに行えることを示している．
+数値の $M$ を用いる従来の人工上下限法では，停止時に人工上下限に非基底変数が残っていても，それが $M$ の不足によるのか元問題の非有界性によるのかを区別できず，$M$ を増やして再開し，閾値を超えた時点で非有界と宣言するほかなかった\cite{koberstein2005}．命題~\ref{prop:trichotomy}は，この区別が $M$ を記号的に扱えば停止時の傾き $z^1$ の符号だけで厳密に，かつ再開なしに行えることを示している．
 
-命題~\ref{prop:trichotomy}(iii)の場合，最適\emph{基底} $(B^\ast,\eta^\ast)$ と最適値 $z_0$ は $M$ を固定せずに得られるが，具体的な最適解ベクトルを取り出すには，以下に述べる後処理を要する．
+命題~\ref{prop:trichotomy}(iii)の場合，最適\emph{基底} $(B^\ast,\eta^\ast)$ と最適値 $z^0$ は $M$ を固定せずに得られるが，具体的な最適解ベクトルを取り出すには，以下に述べる後処理を要する．
 
 \paragraph{人工上下限に置かれた非基底変数の扱いと後処理．}
-最終状態 $(B^\ast,\eta^\ast)$ で非基底のまま残る変数 $j$ のうち，$\delta_j\neq0$(非有界であった側に置かれ，$x_j(M)=\mp M$ となっている)ものを考える．このような $j$ は，片側のみ非有界な変数(有限な側の上下限は前処理によりちょうど $0$)か自由変数のいずれかである．
+最終状態 $(B^\ast,\eta^\ast)$ で非基底のまま残る変数 $j$ のうち，$x_j^1\neq0$(非有界であった側に置かれ，$x_j(M)=\mp M$ となっている)ものを考える．このような $j$ は，片側のみ非有界な変数(有限な側の上下限は前処理によりちょうど $0$)か自由変数のいずれかである．
 
 標準的な単体法の議論により，$x_B(M)=A_B^{-1}(b-A_Nx_N(M))$ を用いて $z(M)=c_B^\top x_B(M)+c_N^\top x_N(M)$ を書き直すと，
 \[
   z(M) \ =\ c_B^\top A_B^{-1}b \ +\ \sum_{j\in N} \bar c_j\, x_j(M)
 \]
-となる．非基底値 $x_j(M)$ のうち $M$ に依存する項(人工上下限に置かれた $j$)だけを取り出せば，$z(M)=z_0+z_1M$ の傾きは
+となる．非基底値 $x_j(M)$ のうち $M$ に依存する項(人工上下限に置かれた $j$)だけを取り出せば，$z(M)=z^0+z^1M$ の傾きは
 \[
-  z_1 \ =\ \sum_{\substack{j\in N,\ \eta(j)=L\\ l_j=-\infty}} (-\bar c_j) \ +\ \sum_{\substack{j\in N,\ \eta(j)=U\\ u_j=+\infty}} \bar c_j
+  z^1 \ =\ \sum_{\substack{j\in N,\ \eta(j)=L\\ l_j=-\infty}} (-\bar c_j) \ +\ \sum_{\substack{j\in N,\ \eta(j)=U\\ u_j=+\infty}} \bar c_j
 \]
-と表される(この式は，補題~\ref{lem:affine}の $z_1=c_N^\top\delta-c_B^\top g$ を被約費用で書き直したものに等しい)．双対実行可能性より，$\eta(j)=L$ の各項は $\bar c_j\ge0$ ゆえ $-\bar c_j\le0$，$\eta(j)=U$ の各項は $\bar c_j\le0$ であるから，$z_1$ は\emph{非正の項の和}であり，これは先に示した $z_1\le0$ の別証明でもある．とくに，
+と表される(この式は，補題~\ref{lem:affine}の $z^1=c^\top x^1$ を被約費用で書き直したものに等しい)．双対実行可能性より，$\eta(j)=L$ の各項は $\bar c_j\ge0$ ゆえ $-\bar c_j\le0$，$\eta(j)=U$ の各項は $\bar c_j\le0$ であるから，$z^1$ は\emph{非正の項の和}であり，これは先に示した $z^1\le0$ の別証明でもある．とくに，
 \[
-  z_1=0 \quad\Longleftrightarrow\quad \delta_j\neq0\ \text{なるすべての非基底変数 $j$ について}\ \bar c_j=0
+  z^1=0 \quad\Longleftrightarrow\quad x_j^1\neq0\ \text{なるすべての非基底変数 $j$ について}\ \bar c_j=0
 \]
 が成り立つ．これは，非有界な方向に置かれた非基底変数の被約費用は $0$ でなければならないという標準的な最適性条件に他ならない．
 
-しかし，$\delta_j\neq0$ なる非基底変数が存在する場合，形式的に $M=0$ を代入して得られる点 $(p,x_N^0)$ は，一般には元問題の実行可能解にならない．非基底値 $x_N^0$ は前処理により真の上下限上にあるが，基底値 $x_B(M)=p-Mg$ の主実行可能性は $M\ge M^\dagger$ でしか保証されず，$M=0$ まで外挿すると上下限を逸脱しうるからである．次の補題は，$\bar c_j=0$ という性質を利用してこの問題を解消する．
+しかし，$x_j^1\neq0$ なる非基底変数が存在する場合，形式的に $M=0$ を代入して得られる点 $x^0=(x_N^0,x_B^0)$ は，一般には元問題の実行可能解にならない．非基底値 $x_N^0$ は前処理により真の上下限上にあるが，基底値 $x_B(M)=x_B^0+Mx_B^1$ の主実行可能性は $M\ge M^\dagger$ でしか保証されず，$M=0$ まで外挿すると上下限を逸脱しうるからである．次の補題は，$\bar c_j=0$ という性質を利用してこの問題を解消する．
 
 \begin{lemma}[人工上下限に置かれた非基底変数の主比検定による除去]
 \label{lem:cleanup}
-$z_1=0$ とする．組合せ的状態 $(B,\eta)$ は元問題~\eqref{eq:lp}に対して双対実行可能であり，その基底解 $x(M)$ の各成分は $M$ のアフィン関数で，十分大きなすべての $M$ で元問題の上下限 $l\le x(M)\le u$ を満たすとする(最終状態 $(B^\ast,\eta^\ast)$ はこれを満たす．$F_M\subseteq F$ であり，双対実行可能性は $M$ に依存しないため)．$j\in N$ を $\delta_j\neq0$ なる非基底変数とする($z_1=0$ より $\bar c_j=0$)．前処理により，$j$ の現在値は $x_j(M)=\delta_jM$ であり，$j$ が片側のみ非有界ならその有限な側の上下限はちょうど $0$ である．$x_j$ を $\delta_jM$ から $0$ へ向けて移動量 $t\in[0,M]$ だけ動かす($x_j\gets\delta_j(M-t)$)と，基底変数は
+$z^1=0$ とする．組合せ的状態 $(B,\eta)$ は元問題~\eqref{eq:lp}に対して双対実行可能であり，その基底解 $x(M)$ の各成分は $M$ のアフィン関数で，十分大きなすべての $M$ で元問題の上下限 $l\le x(M)\le u$ を満たすとする(最終状態 $(B^\ast,\eta^\ast)$ はこれを満たす．$F_M\subseteq F$ であり，双対実行可能性は $M$ に依存しないため)．$j\in N$ を $x_j^1\neq0$ なる非基底変数とする($z^1=0$ より $\bar c_j=0$)．前処理により，$j$ の現在値は $x_j(M)=x_j^1M$ であり，$j$ が片側のみ非有界ならその有限な側の上下限はちょうど $0$ である．$x_j$ を $x_j^1M$ から $0$ へ向けて移動量 $t\in[0,M]$ だけ動かす($x_j\gets x_j^1(M-t)$)と，基底変数は
 \[
-  x_B \ \gets\ x_B(M) + \delta_j\,t\,\alpha_{\cdot j}, \qquad \alpha_{\cdot j}:=A_B^{-1}A_j
+  x_B \ \gets\ x_B(M) + x_j^1\,t\,\alpha_{\cdot j}, \qquad \alpha_{\cdot j}:=A_B^{-1}A_j
 \]
 と変化する．各行 $i$ について，$x_{B,i}$ が $\beta(i)$ の\emph{真に有限な}境界に到達する移動量を
 \[
   t_i :=
   \begin{cases}
-    \dfrac{u_{\beta(i)}-x_{B,i}(M)}{\delta_j\alpha_{ij}} & (\delta_j\alpha_{ij}>0,\ u_{\beta(i)}<+\infty)\\[2ex]
-    \dfrac{x_{B,i}(M)-l_{\beta(i)}}{-\delta_j\alpha_{ij}} & (\delta_j\alpha_{ij}<0,\ l_{\beta(i)}>-\infty)
+    \dfrac{u_{\beta(i)}-x_{B,i}(M)}{x_j^1\alpha_{ij}} & (x_j^1\alpha_{ij}>0,\ u_{\beta(i)}<+\infty)\\[2ex]
+    \dfrac{x_{B,i}(M)-l_{\beta(i)}}{-x_j^1\alpha_{ij}} & (x_j^1\alpha_{ij}<0,\ l_{\beta(i)}>-\infty)
   \end{cases}
 \]
 と定め(それ以外の行は移動を妨げない．人工境界 $\pm M$ は元問題には存在しないので考慮しない)，$t^\ast$ を $\{M\}\cup\{t_i\}$ の $\succ$ に関する最小元とする(いずれも $M$ のアフィン関数である．同順位は $M$ を優先し，$t_i$ どうしは添字の小さい方を優先する)．そのうえで，
@@ -548,21 +550,21 @@ $z_1=0$ とする．組合せ的状態 $(B,\eta)$ は元問題~\eqref{eq:lp}に�
 \item 目的関数値は変化しない．
 \item 元問題~\eqref{eq:lp}に対する双対実行可能性は保たれる．
 \item 更新後の基底解も $M$ のアフィン関数であり，十分大きなすべての $M$ で $l\le x(M)\le u$ を満たす．
-\item $\delta_j\neq0$ なる非基底変数の個数はちょうど $1$ 減る．
+\item $x_j^1\neq0$ なる非基底変数の個数はちょうど $1$ 減る．
 \end{enumerate}
 \end{lemma}
 
 \begin{proof}
-(i)：移動による目的関数値の変化は $c_j(-\delta_jt)+c_B^\top(\delta_jt\,\alpha_{\cdot j})=-\delta_jt\,(c_j-c_B^\top A_B^{-1}A_j)=-\delta_jt\,\bar c_j=0$ である．
+(i)：移動による目的関数値の変化は $c_j(-x_j^1t)+c_B^\top(x_j^1t\,\alpha_{\cdot j})=-x_j^1t\,(c_j-c_B^\top A_B^{-1}A_j)=-x_j^1t\,\bar c_j=0$ である．
 
 (ii)：(A)では基底が変わらないので被約費用は不変であり，$j$ の状態のみが変わるが，$\bar c_j=0$ は状態 $L,U,Z$ のいずれの条件も満たす．(B)では，タブロー更新公式により他の非基底変数 $k$ の被約費用は $\bar c_k^{\mathrm{new}}=\bar c_k-(\bar c_j/\alpha_{rj})\alpha_{rk}=\bar c_k$ と不変であり，脱退変数の被約費用は $\bar c_{\beta(r)}^{\mathrm{new}}=-\bar c_j/\alpha_{rj}=0$ となるから，$\beta(r)$ をどちらの境界に置いても符号条件を満たす．
 
-(iii)：$t^\ast$ は $M$ のアフィン関数であるから，更新後の各成分もアフィン関数である．仮定より $x(M)$ は十分大きな $M$ で真の有限境界を満たすから，各 $t_i\succeq0$ であり，したがって $0\preceq t^\ast\preceq M$．非基底変数 $j$ は $\delta_jM$ と $0$ の間にとどまり，これは $j$ の上下限の範囲内である．移動を妨げうる基底変数 $i$ については $t^\ast\preceq t_i$ より境界までの余裕が $\succeq0$ に保たれ，その他の基底変数は非有界な側へ動くか動かない．(B)で脱退する $\beta(r)$ はちょうど有限境界上にある．他の非基底変数は変化しない．$\succeq0$ は十分大きな $M$ での数値的な非負性と一致する．
+(iii)：$t^\ast$ は $M$ のアフィン関数であるから，更新後の各成分もアフィン関数である．仮定より $x(M)$ は十分大きな $M$ で真の有限境界を満たすから，各 $t_i\succeq0$ であり，したがって $0\preceq t^\ast\preceq M$．非基底変数 $j$ は $x_j^1M$ と $0$ の間にとどまり，これは $j$ の上下限の範囲内である．移動を妨げうる基底変数 $i$ については $t^\ast\preceq t_i$ より境界までの余裕が $\succeq0$ に保たれ，その他の基底変数は非有界な側へ動くか動かない．(B)で脱退する $\beta(r)$ はちょうど有限境界上にある．他の非基底変数は変化しない．$\succeq0$ は十分大きな $M$ での数値的な非負性と一致する．
 
-(iv)：(A)では $j$ の非基底値が $0$ となり $\delta_j=0$ となる．(B)では $j$ は基底に入り，代わって非基底となる $\beta(r)$ は有限境界に置かれる($\delta_{\beta(r)}=0$)．他の非基底変数の状態は変わらない．
+(iv)：(A)では $j$ の非基底値が $0$ となり $x_j^1=0$ となる．(B)では $j$ は基底に入り，代わって非基底となる $\beta(r)$ は有限境界に置かれる($x_{\beta(r)}^1=0$)．他の非基底変数の状態は変わらない．
 \end{proof}
 
-補題~\ref{lem:cleanup}を，$\delta_j\neq0$ なる非基底変数がなくなるまで繰り返し適用する．(iv)により，最終状態 $(B^\ast,\eta^\ast)$ における該当変数の個数を $K$ とすれば，ちょうど $K$ 回で終了する．得られた基底 $(\tilde B,\tilde\eta)$ では $\delta=0$ であるから，非基底値 $x_N=x_N^0$ は $M$ に依存せず，したがって基底値 $x_B=A_{\tilde B}^{-1}(b-A_Nx_N^0)$ も $M$ に依存しない定数である．(iii)より，この定数ベクトル $x^{\ast\ast}$ は十分大きな $M$ で(したがって $M$ によらず)$l\le x^{\ast\ast}\le u$ を満たし，元問題~\eqref{eq:lp}に対して主実行可能である．また(ii)より双対実行可能であるから，$x^{\ast\ast}$ は元問題の最適\emph{基底}解であり，(i)より $c^\top x^{\ast\ast}=z(M)=z_0$ である(命題~\ref{prop:trichotomy}(iii)と整合する)．
+補題~\ref{lem:cleanup}を，$x_j^1\neq0$ なる非基底変数がなくなるまで繰り返し適用する．(iv)により，最終状態 $(B^\ast,\eta^\ast)$ における該当変数の個数を $K$ とすれば，ちょうど $K$ 回で終了する．得られた基底 $(\tilde B,\tilde\eta)$ では $x_N^1=0$ であるから，非基底値 $x_N=x_N^0$ は $M$ に依存せず，したがって基底値 $x_B=A_{\tilde B}^{-1}(b-A_Nx_N^0)$ も $M$ に依存しない定数である．(iii)より，この定数ベクトル $x^{\ast\ast}$ は十分大きな $M$ で(したがって $M$ によらず)$l\le x^{\ast\ast}\le u$ を満たし，元問題~\eqref{eq:lp}に対して主実行可能である．また(ii)より双対実行可能であるから，$x^{\ast\ast}$ は元問題の最適\emph{基底}解であり，(i)より $c^\top x^{\ast\ast}=z(M)=z^0$ である(命題~\ref{prop:trichotomy}(iii)と整合する)．
 
 \begin{remark}[状態 $Z$ の使用と，零列の場合]
 \label{rem:state-F}
@@ -570,20 +572,20 @@ $z_1=0$ とする．組合せ的状態 $(B,\eta)$ は元問題~\eqref{eq:lp}に�
 \end{remark}
 
 \begin{remark}[任意の行でピボットする後処理との比較]
-$\delta_j\neq0$ なる $j$ を，$\alpha_{rj}\neq0$ なる\emph{任意の}行 $r$ で基底に入れ，$\beta(r)$ を有限な側へ固定する退化ピボットでも，補題~\ref{lem:cleanup}の(i)(ii)(iv)は成り立つ．しかしこの場合，$\beta(r)$ の値が境界へ強制的に移されるために主実行可能性が失われ，$\delta=0$ に達した後に双対単体法を改めて再開する必要が生じる．その反復回数は事前に評価できない．補題~\ref{lem:cleanup}は，比検定によって脱退行を選ぶことで主実行可能性を保ち，この再開を不要にしている．また，最終状態の基底解 $x(M)$ に具体的な数値の $M$(主実行可能となる最小の値)を代入しても最適解は得られるが，その値は一般に基底解ではなく，傾きの小さい行があれば $M$ が極端に大きくなって数値誤差を招く．補題~\ref{lem:cleanup}の手続きは $M$ を記号のまま扱い，最後には $M$ を含まない基底解を与えるため，この問題も生じない．
+$x_j^1\neq0$ なる $j$ を，$\alpha_{rj}\neq0$ なる\emph{任意の}行 $r$ で基底に入れ，$\beta(r)$ を有限な側へ固定する退化ピボットでも，補題~\ref{lem:cleanup}の(i)(ii)(iv)は成り立つ．しかしこの場合，$\beta(r)$ の値が境界へ強制的に移されるために主実行可能性が失われ，$x_N^1=0$ に達した後に双対単体法を改めて再開する必要が生じる．その反復回数は事前に評価できない．補題~\ref{lem:cleanup}は，比検定によって脱退行を選ぶことで主実行可能性を保ち，この再開を不要にしている．また，最終状態の基底解 $x(M)$ に具体的な数値の $M$(主実行可能となる最小の値)を代入しても最適解は得られるが，その値は一般に基底解ではなく，傾きの小さい行があれば $M$ が極端に大きくなって数値誤差を招く．補題~\ref{lem:cleanup}の手続きは $M$ を記号のまま扱い，最後には $M$ を含まない基底解を与えるため，この問題も生じない．
 \end{remark}
 
 \begin{remark}[クロスオーバー手続きとの関係]
 \label{rem:crossover}
 \emph{クロスオーバー}(crossover)\cite{megiddo1991,bixby1994,andersen1996}とは，主双対内点法で得られた最適解を，単体法の意味での最適基底解(実行可能領域の端点)に変換する手続きである．主双対内点法は実行可能領域の内部を通って最適解に近づくため，最適解が一意でない場合，得られる解は一般に最適面の相対的内部にあり，端点ではない．すなわち，多くの変数が上下限の間の値をとり，対応する基底が存在しない．しかし，感度分析や，問題を少し変更した後の単体法による再最適化(ウォームスタート)には最適基底が必要となる．そこでクロスオーバーでは，与えられた非端点の最適解から出発し，目的関数値(最適性)を保ったまま，上下限の間にある変数を1つずつ上下限に移すか基底に取り込むかして，最適な端点解とそれに対応する最適基底を構成する．このうち主問題の変数を動かす段階を primal push，双対問題の変数を動かす段階を dual push と呼ぶ．
 
-補題~\ref{lem:cleanup}の操作は，このクロスオーバー手続きにおける primal push と同じ構造を持つ．実際，最終状態 $(B^\ast,\eta^\ast)$ の基底解は，元問題に対しては最適であるが，$\delta_j\neq0$ なる非基底変数が元問題の上下限上にないため，元問題の基底解(端点)ではない．このような $\delta_j\neq0$ なる非基底変数 $j$ は，元問題から見ればどの有限な上下限にも置かれていない非基底変数(いわゆる superbasic 変数)であり，$z_1=0$ よりその被約費用は $0$ である．primal push は，このような変数を1つずつ上下限へ向けて動かし，途中で基底変数が先に上下限に達すればそれと入れ替えるピボットを行う．被約費用が $0$ であることから目的関数値と主・双対の実行可能性が保たれ，1回の操作で該当する変数がちょうど1個減るという性質(補題~\ref{lem:cleanup}(i)--(iv))も共通である．Megiddo\cite{megiddo1991}は，主・双対の最適解の組から高々 $n$ 回のピボットで最適基底が得られることをこの種の議論で示している．補題~\ref{lem:cleanup}は，この primal push を，移動量と基底解が $M$ のアフィン関数となる記号的な設定に適用し，比較を辞書式順序 $\succ$ で行うものである．なお，第\ref{sec:dual-view}節の双対性のもとでは，これは双対問題の側で，値 $0$ で基底に残った人工変数を最適性を保って追い出す操作，すなわちクロスオーバーの dual push にあたる．
+補題~\ref{lem:cleanup}の操作は，このクロスオーバー手続きにおける primal push と同じ構造を持つ．実際，最終状態 $(B^\ast,\eta^\ast)$ の基底解は，元問題に対しては最適であるが，$x_j^1\neq0$ なる非基底変数が元問題の上下限上にないため，元問題の基底解(端点)ではない．このような $x_j^1\neq0$ なる非基底変数 $j$ は，元問題から見ればどの有限な上下限にも置かれていない非基底変数(いわゆる superbasic 変数)であり，$z^1=0$ よりその被約費用は $0$ である．primal push は，このような変数を1つずつ上下限へ向けて動かし，途中で基底変数が先に上下限に達すればそれと入れ替えるピボットを行う．被約費用が $0$ であることから目的関数値と主・双対の実行可能性が保たれ，1回の操作で該当する変数がちょうど1個減るという性質(補題~\ref{lem:cleanup}(i)--(iv))も共通である．Megiddo\cite{megiddo1991}は，主・双対の最適解の組から高々 $n$ 回のピボットで最適基底が得られることをこの種の議論で示している．補題~\ref{lem:cleanup}は，この primal push を，移動量と基底解が $M$ のアフィン関数となる記号的な設定に適用し，比較を辞書式順序 $\succ$ で行うものである．なお，第\ref{sec:dual-view}節の双対性のもとでは，これは双対問題の側で，値 $0$ で基底に残った人工変数を最適性を保って追い出す操作，すなわちクロスオーバーの dual push にあたる．
 \end{remark}
 
 \paragraph{最急辺規則・Devex規則への拡張．}
 Dantzig則((b$'$))はアフィン関数どうしの比較(前述の $\succ$)に帰着した．最急辺規則・Devex規則は逸脱量を重みで正規化した $\Delta_i^2/\gamma_i$ を比較する(Devex規則では $\gamma_i$ の代わりに近似重みを用いる)．まず，重み自体が $M$ に依存しないことを確認する．
 
-最急辺規則の重み $\gamma_i=\sum_{j\in N}\alpha_{ij}^2$ は $A$ と現在の基底 $B$ のみから定まり，$M$ に依存しない．Devex規則の近似重みも，初期値 $1$ とピボット行の成分 $\alpha_{rj}$ のみによる更新から定まるため，同様に $M$ に依存しない．したがって，(b$'$)の逸脱量 $w_i(M)=a_iM+b_i$($i\in V_\infty$)を用いると，比較すべき量 $w_i(M)^2/\gamma_i$ は $M$ の2次式であるが，これを2次式として比較する必要はない．$i\in V_\infty$ では $w_i\succ0$ であるから十分大きな $M$ で $w_i(M)>0$ であり，正の範囲では2乗が狭義単調増加であるから，十分大きな $M$ で
+最急辺規則の重み $\gamma_i=\sum_{j\in N}\alpha_{ij}^2$ は $A$ と現在の基底 $B$ のみから定まり，$M$ に依存しない．Devex規則の近似重みも，初期値 $1$ とピボット行の成分 $\alpha_{rj}$ のみによる更新から定まるため，同様に $M$ に依存しない．したがって，(b$'$)の逸脱量 $w_i(M)=w_i^1M+w_i^0$($i\in V_\infty$)を用いると，比較すべき量 $w_i(M)^2/\gamma_i$ は $M$ の2次式であるが，これを2次式として比較する必要はない．$i\in V_\infty$ では $w_i\succ0$ であるから十分大きな $M$ で $w_i(M)>0$ であり，正の範囲では2乗が狭義単調増加であるから，十分大きな $M$ で
 \[
   \frac{w_i(M)^2}{\gamma_i} > \frac{w_k(M)^2}{\gamma_k}
   \quad\Longleftrightarrow\quad
@@ -591,9 +593,9 @@ Dantzig則((b$'$))はアフィン関数どうしの比較(前述の $\succ$)に�
 \]
 が成り立つ．右辺の各辺は，$\gamma_i$ が $M$ に依存しないことから，$M$ のアフィン関数
 \[
-  \frac{w_i(M)}{\sqrt{\gamma_i}} \ =\ \frac{a_i}{\sqrt{\gamma_i}}\,M \ +\ \frac{b_i}{\sqrt{\gamma_i}}
+  \frac{w_i(M)}{\sqrt{\gamma_i}} \ =\ \frac{w_i^1}{\sqrt{\gamma_i}}\,M \ +\ \frac{w_i^0}{\sqrt{\gamma_i}}
 \]
-である．したがって，最急辺規則による脱退変数選択の $M\to\infty$ 版は，係数対 $\bigl(a_i/\sqrt{\gamma_i},\ b_i/\sqrt{\gamma_i}\bigr)$ の辞書式比較として
+である．したがって，最急辺規則による脱退変数選択の $M\to\infty$ 版は，係数対 $\bigl(w_i^1/\sqrt{\gamma_i},\ w_i^0/\sqrt{\gamma_i}\bigr)$ の辞書式比較として
 \[
   r \ \in\ \operatorname*{arg\,max}_{i\in V_\infty}{}^{\succ}\ \frac{w_i}{\sqrt{\gamma_i}}
 \]
@@ -602,51 +604,6 @@ Dantzig則((b$'$))はアフィン関数どうしの比較(前述の $\succ$)に�
 \begin{remark}
 この形では，Dantzig則はちょうど $\gamma_i\equiv1$ とした特別な場合にあたり，3つの規則はいずれも係数対の辞書式比較という同一の枠組みに収まる．$M$ の2次式を比較するための多項式の辞書式順序のような一般化は要しない．
 \end{remark}
-
-\subsection{双対問題から見た解釈：双対問題に対する大$M$法}
-\label{sec:dual-view}
-
-ここまでの構成は，双対問題の側から見ると，元問題の双対問題に古典的な大$M$法を適用し，$M$ を記号的に扱ったものに他ならない．本節ではこの対応をまとめる．
-
-非有界な側を持つ添字の集合を $J^-:=\{j:l_j=-\infty\}$，$J^+:=\{j:u_j=+\infty\}$ とおく．有界化した問題~\eqref{eq:lpM}を再掲すると
-\begin{equation}
-  \min\ c^\top x \quad \text{s.t.}\quad Ax=b,\ \hat l\le x\le \hat u
-  \tag{\ref{eq:lpM}}
-\end{equation}
-であり，式~\eqref{eq:trunc}より $\hat l_j=-M\ (j\in J^-)$，$\hat u_j=M\ (j\in J^+)$，それ以外は $\hat l_j=l_j$，$\hat u_j=u_j$ である．この問題の双対問題は，下限・上限制約に対する双対変数を $\lambda,\mu\in\R^n$ として
-\begin{align}
-  \max\quad & b^\top y+\sum_{j\notin J^-} l_j\lambda_j-\sum_{j\notin J^+} u_j\mu_j\ -\ M\Bigl(\sum_{j\in J^-}\lambda_j+\sum_{j\in J^+}\mu_j\Bigr) \label{eq:dualM}\\
-  \text{s.t.}\quad & A^\top y+\lambda-\mu=c,\quad \lambda,\mu\ge0 \notag
-\end{align}
-で与えられる(ゼロ固定スラック $s$ は主問題を変えないので，ここでは省いて考えてよい)．一方，元問題~\eqref{eq:lp}には非有界な側の上下限制約が存在しないから，その双対問題は\eqref{eq:dualM}に
-\[
-  \lambda_j=0\ \ (j\in J^-),\qquad \mu_j=0\ \ (j\in J^+)
-\]
-を課した(したがってペナルティ項が消えた)問題であり，$\bar c_j:=c_j-A_j^\top y$ に対する双対制約 $\bar c_j\le0\ (j\in J^-)$，$\bar c_j\ge0\ (j\in J^+)$ を持つ(自由変数では $\bar c_j=0$)．すなわち，$\lambda_j\ (j\in J^-)$，$\mu_j\ (j\in J^+)$ はこれらの双対制約の違反量を吸収する\emph{人工変数}であり，\eqref{eq:dualM}は元の双対問題に人工変数を導入して係数 $M$ のペナルティを課した大$M$法の問題そのものである．つまり，主問題の非有界な上下限を $\mp M$ で置き換えることは，双対問題の制約を係数 $M$ のペナルティで緩和することと双対な操作である．これは，主問題に対する大$M$法の双対問題が双対変数を $M$ で有界化した問題となるというよく知られた事実の，主と双対を入れ替えた形にあたる．
-
-さらに，主問題に対する双対単体法は，双対問題に対する主単体法を主問題のタブロー上で実行したものである\cite{lemke1954,bertsimas1997}．実際，組合せ的状態 $(B,\eta)$ に対し，相補性から定まる基底双対解を
-\[
-  y^\top=c_B^\top A_B^{-1},\qquad
-  \lambda_j=\bar c_j\ \ (j\in N,\ \eta(j)=L),\qquad
-  \mu_j=-\bar c_j\ \ (j\in N,\ \eta(j)=U)
-\]
-(その他の成分は $0$)とおくと，等式制約 $A^\top y+\lambda-\mu=c$ は自動的に満たされ，$\lambda,\mu\ge0$ はちょうど第\ref{sec:dual-simplex}節の双対実行可能性の条件に一致する．このときの\eqref{eq:dualM}の目的関数値は $b^\top y+\sum_{j\in N}\bar c_jx_j(M)$ であり，第\ref{sec:M-infty}節で見た $z(M)=z_0+z_1M$ に等しく，そのペナルティ部分は
-\[
-  -z_1 \ =\ \sum_{\substack{j\in N\cap J^-\\ \eta(j)=L}}\lambda_j\ +\sum_{\substack{j\in N\cap J^+\\ \eta(j)=U}}\mu_j ,
-\]
-すなわち人工変数の値の総和(元の双対問題に対する非実行可能性)である．したがって，本稿のアルゴリズムは，双対問題~\eqref{eq:dualM}に対して，$M$ を記号的に扱う大$M$法を主単体法で実行したものと一致する．各構成要素は次のように対応する．
-
-\begin{itemize}
-\item \textbf{自明な初期基底}(第\ref{sec:init-basis}節)：$y=0$ では $\bar c=c$ であり，人工変数が正となるのはちょうど $j\in S$ に対してで，その値は $|c_j|$ である．大$M$法において，人工変数が制約の違反を吸収することで自明な初期基底が得られるのと同じ構造である．ただし人工変数が必要となるのは，すべての行ではなく，違反している双対制約 $j\in S$ に対してのみである．また人工変数の列を陽に追加する必要はなく，主問題の非基底変数を $\mp M$ に置くことがそれを暗に表している．
-\item \textbf{非有界境界上の非基底変数}：$\delta_j\neq0$ なる非基底変数 $j$ は，人工変数 $\lambda_j$ または $\mu_j$(値 $|\bar c_j|$)が双対問題の基底に残っていることに対応する．
-\item \textbf{辞書式比較 $\succ$}(第\ref{sec:M-infty}節)：係数対 $(z_1,z_0)$ の辞書式比較は，大$M$法を $M\to+\infty$ の極限で扱うこと，すなわち人工変数の総和(双対非実行可能性)の最小化を元の目的関数に優先させる辞書式最適化\cite{sherali1983}にあたる．$M$ を非アルキメデス的な無限大として扱う大$M$法\cite{cococcioni2021}を双対問題に適用したものとみなせる．$M$ を数値として固定すれば，これは双対単体法のフェーズ1の一つとして知られる人工上下限法\cite{koberstein2007,huang2021}にあたる．$z_1<0$ の間が双対のフェーズ1に，$z_1=0$ に達して以降がフェーズ2にあたるという注~\ref{rem:z1zero}の解釈は，大$M$法が極限で2段階法に一致すること\cite{chvatal1983,bertsimas1997}の双対版である．
-\item \textbf{3通りの場合の判別}(命題~\ref{prop:trichotomy})：停止時に $z_1<0$ であることは，十分大きなすべての $M$ で人工変数が正のまま残る，すなわち元の双対問題が実行不可能であることに対応し，$F\neq\emptyset$ と合わせて元問題の非有界性が従う．$\mathrm{Eligible}=\emptyset$ による停止は，\eqref{eq:dualM}が非有界となる場合に対応する．これらは大$M$法の古典的な判定を双対問題に適用したものである．
-\item \textbf{$M^\dagger$ の存在}(補題~\ref{lem:union})：ペナルティを課した双対制約の乗数は主変数 $x_j$ そのものであるから，$M\ge\|x\|_\infty$ ならば $x\in F_M$ となるという補題~\ref{lem:union}の議論は，ペナルティ係数が最適乗数の大きさを上回れば $L_1$ ペナルティが厳密になるという，厳密ペナルティの閾値の議論にあたる．
-\item \textbf{後処理}(補題~\ref{lem:cleanup})：$z_1=0$ かつ $\delta_j\neq0$ なる $j$ は，値 $0$ で双対問題の基底に残った人工変数に対応し，補題~\ref{lem:cleanup}はフェーズ1終了時にこれを基底から追い出す古典的な操作にあたる．教科書的な手続きでは，非零要素を持つ任意の行でピボットする．これにより双対問題の実行可能性は保たれるが，双対問題の最適性(すなわち主問題の実行可能性)は一般に失われる．補題~\ref{lem:cleanup}の主比検定は，このピボットを最適性を保つように選ぶものであり，クロスオーバー手続きの dual push にあたる(注~\ref{rem:crossover})．
-\item \textbf{非有界境界への非復帰}(第\ref{sec:no-return}節)：$\delta=0$ への到達は，人工変数がすべて双対問題の基底から出たことに対応し，以後の反復は元の双対問題に対する主単体法，すなわち元問題に対する古典的双対単体法となる(注~\ref{rem:absorbing})．
-\end{itemize}
-
-次節の BFRT は，双対問題の側から見れば，区分線形な双対目的関数の折れ点を1回の反復で複数通過する長ステップの比検定である．人工変数のペナルティにより，非有界な側を持つ変数の折れ点での傾きの変化に $M$ に比例する項が現れることが，フリップ容量 $\mathrm{cap}_j(M)$ の傾き $|\hat\alpha_j|s_j$ にあたる．
 
 \subsection{Bound Flipping Ratio Test (BFRT) との融合}
 \label{sec:bfrt}
@@ -659,13 +616,13 @@ Dantzig則((b$'$))はアフィン関数どうしの比較(前述の $\succ$)に�
 \[
   \hat u_j(M)-\hat l_j(M) \ =\ \omega_j + s_j M
 \]
-を満たす定数とする(前処理により，両側有限なら $\omega_j=u_j-l_j$，それ以外は $\omega_j=0$)．変数 $j$ を反対側の上下限へフリップさせたとき，脱退行 $r$ の値 $x_{B,r}$ が $d$ の方向に変化する量(「フリップ容量」)は
+を満たす定数とする(前処理により，両側有限なら $\omega_j=u_j-l_j$，それ以外は $\omega_j=0$)．変数 $j$ を反対側の上下限へフリップさせたとき，脱退行 $r$ の値 $x_{B,r}$ が $\rho$ の方向に変化する量(「フリップ容量」)は
 \[
   \mathrm{cap}_j(M) \ :=\ |\hat\alpha_j|\,\bigl(\omega_j+s_jM\bigr)
 \]
-で与えられる($M$ のアフィン関数，傾き $|\hat\alpha_j|s_j\ge0$)．実際，$\eta(j)=L$($\sigma_j=+1$)から $U$ へのフリップは $x_j$ を $+(\hat u_j-\hat l_j)$ だけ変化させ，これによる $x_{B,r}$ への効果は $-\alpha_{rj}(\hat u_j-\hat l_j)=-\sigma_j\alpha_{rj}(\hat u_j-\hat l_j)=-\hat\alpha_j(\hat u_j-\hat l_j)$ であり，$j\in\mathrm{Eligible}$($d\hat\alpha_j<0$)より，この効果はちょうど $d$ の方向に $\mathrm{cap}_j(M)$ だけ $x_{B,r}$ を動かす($\eta(j)=U$ からの反対向きのフリップでも同様の計算により同じ結論が成り立つ)．
+で与えられる($M$ のアフィン関数，傾き $|\hat\alpha_j|s_j\ge0$)．実際，$\eta(j)=L$($\sigma_j=+1$)から $U$ へのフリップは $x_j$ を $+(\hat u_j-\hat l_j)$ だけ変化させ，これによる $x_{B,r}$ への効果は $-\alpha_{rj}(\hat u_j-\hat l_j)=-\sigma_j\alpha_{rj}(\hat u_j-\hat l_j)=-\hat\alpha_j(\hat u_j-\hat l_j)$ であり，$j\in\mathrm{Eligible}$($\rho\hat\alpha_j<0$)より，この効果はちょうど $\rho$ の方向に $\mathrm{cap}_j(M)$ だけ $x_{B,r}$ を動かす($\eta(j)=U$ からの反対向きのフリップでも同様の計算により同じ結論が成り立つ)．
 
-脱退行 $r$ の逸脱量は $w_r(M)=a_rM+b_r$($r\in V_\infty$ より $w_r\succ0$)であった．累積フリップ容量
+脱退行 $r$ の逸脱量は $w_r(M)=w_r^1M+w_r^0$($r\in V_\infty$ より $w_r\succ0$)であった．累積フリップ容量
 \[
   C_k(M) \ :=\ \sum_{i=1}^{k} \mathrm{cap}_{j_i}(M) \qquad (k=0,1,\dots,p;\ C_0:=0)
 \]
@@ -687,58 +644,58 @@ $w_r,C_0,C_1,\dots,C_p$ は有限個のアフィン関数であるから，そ�
 
 (i)：数値として $M\ge M^\dagger$ を固定して逐次的に比検定・ピボットを行う古典的BFRTは，$\theta$ の昇順に候補を走査しながらフリップ容量の累積が $w_r(M)$ に達するまでフリップを続け，達した時点の候補を加入変数として通常のピボットを行う，という手続きに他ならない．$M\ge M^\dagger$ のもとでは $\succ$ による判定と数値比較が一致するから，この手続きはちょうど $k^\ast$ を用いた上記の判定に一致する．
 
-(ii)：$\mathrm{Eligible}$ 全体をフリップさせても累積容量が $w_r(M)$ に届かない($M\ge M^\dagger$)場合，$x_{B,r}$ をどのようにフリップ・ピボットしても $d$ の方向に $w_r(M)$ だけ動かすことはできないから，行 $r$ の逸脱を解消する主実行可能解は存在せず，問題~\eqref{eq:lpM}は実行不可能である．
+(ii)：$\mathrm{Eligible}$ 全体をフリップさせても累積容量が $w_r(M)$ に届かない($M\ge M^\dagger$)場合，$x_{B,r}$ をどのようにフリップ・ピボットしても $\rho$ の方向に $w_r(M)$ だけ動かすことはできないから，行 $r$ の逸脱を解消する主実行可能解は存在せず，問題~\eqref{eq:lpM}は実行不可能である．
 \end{proof}
 
-フリップ $j_1,\dots,j_{k^\ast-1}$ は基底 $B$ を変更しない(すべて非基底のまま反対側の上下限へ移るだけである)．基底値 $x_B(M)=p-Mg$(補題~\ref{lem:affine})は，各フリップにより
+フリップ $j_1,\dots,j_{k^\ast-1}$ は基底 $B$ を変更しない(すべて非基底のまま反対側の上下限へ移るだけである)．基底値 $x_B(M)=x_B^0+Mx_B^1$(補題~\ref{lem:affine})は，各フリップにより
 \[
-  p \ \gets\ p - \sigma_{j_i}\omega_{j_i}\,\alpha_{\cdot,j_i}, \qquad
-  g \ \gets\ g + \sigma_{j_i}s_{j_i}\,\alpha_{\cdot,j_i} \qquad (\alpha_{\cdot,j_i}:=A_B^{-1}A_{j_i})
+  x_B^0 \ \gets\ x_B^0 - \sigma_{j_i}\omega_{j_i}\,\alpha_{\cdot,j_i}, \qquad
+  x_B^1 \ \gets\ x_B^1 - \sigma_{j_i}s_{j_i}\,\alpha_{\cdot,j_i} \qquad (\alpha_{\cdot,j_i}:=A_B^{-1}A_{j_i})
 \]
 と更新され，$M$ のアフィン関数のままである．BFRTを導入しても停止条件(最適または実行不可能)は変わらないため，命題~\ref{prop:trichotomy}や補題~\ref{lem:cleanup}には変更を要しない．
 
 \subsection{非有界境界への非復帰と手法の解釈}
 \label{sec:no-return}
 
-反復の途中でひとたび $\delta=0$(非基底変数がすべて真に有限な上下限に置かれた状態)が達成されれば，以後の反復で非有界境界が非基底変数として再び現れることはない．この性質の核心は，有限な実数である $x_{B,r}$ が非有界な境界を「逸脱」することは決してない，という事実にある．
+反復の途中でひとたび $x_N^1=0$(非基底変数がすべて真に有限な上下限に置かれた状態)が達成されれば，以後の反復で非有界境界が非基底変数として再び現れることはない．この性質の核心は，有限な実数である $x_{B,r}$ が非有界な境界を「逸脱」することは決してない，という事実にある．
 
 \begin{proposition}[非有界境界への非基底変数の非復帰]
 \label{prop:no-return}
-拡張双対単体法(Step~2の(a$'$)(b$'$)(c)(d)，および命題~\ref{prop:bfrt}のBFRTを併用する場合を含む)による組合せ的状態遷移列 $(B^{(0)},\eta^{(0)})\to(B^{(1)},\eta^{(1)})\to\cdots$ を考える．ある $k_0\ge0$ で $(B^{(k_0)},\eta^{(k_0)})$ の非基底変数がすべて $\delta_j=0$(すなわち真に有限な上下限に置かれている)ならば，すべての $k\ge k_0$ で同じことが成り立つ．
+拡張双対単体法(Step~2の(a$'$)(b$'$)(c)(d)，および命題~\ref{prop:bfrt}のBFRTを併用する場合を含む)による組合せ的状態遷移列 $(B^{(0)},\eta^{(0)})\to(B^{(1)},\eta^{(1)})\to\cdots$ を考える．ある $k_0\ge0$ で $(B^{(k_0)},\eta^{(k_0)})$ の非基底変数がすべて $x_j^1=0$(すなわち真に有限な上下限に置かれている)ならば，すべての $k\ge k_0$ で同じことが成り立つ．
 \end{proposition}
 
 \begin{proof}
-$k\ge k_0$ に関する帰納法で示す．$k=k_0$ では仮定により成立する．ある $k\ge k_0$ で $(B^{(k)},\eta^{(k)})$ の非基底変数がすべて $\delta_j=0$ であると仮定し，$(B^{(k)},\eta^{(k)})\to(B^{(k+1)},\eta^{(k+1)})$ の1回の反復(BFRTのフリップを伴う場合を含む)を考える．
+$k\ge k_0$ に関する帰納法で示す．$k=k_0$ では仮定により成立する．ある $k\ge k_0$ で $(B^{(k)},\eta^{(k)})$ の非基底変数がすべて $x_j^1=0$ であると仮定し，$(B^{(k)},\eta^{(k)})\to(B^{(k+1)},\eta^{(k+1)})$ の1回の反復(BFRTのフリップを伴う場合を含む)を考える．
 
-まず，補題~\ref{lem:affine}において $\delta=0$ であるから $x_N(M)\equiv x_N^0$ であり，したがって $g=A_B^{-1}A_N\delta=0$，すなわち $x_B(M)\equiv p$ は $M$ に依存しない定数である．
+まず，補題~\ref{lem:affine}において $x_N^1=0$ であるから $x_N(M)\equiv x_N^0$ であり，したがって $x_B^1=-A_B^{-1}A_Nx_N^1=0$，すなわち $x_B(M)\equiv x_B^0$ は $M$ に依存しない定数である．
 
-各行 $i$ について，$\beta(i)$ が非有界な側を持つ場合(たとえば $l_{\beta(i)}=-\infty$)，対応する逸脱量 $v_i^-(M)=\hat l_{\beta(i)}(M)-x_{B,i}(M)=(-M)-p_i$ は傾き $-1$ を持ち，$M\to\infty$ で $-\infty$ に発散するから，いかなる $M^\dagger$ に対しても $M\ge M^\dagger$ で $v_i^-\succ0$ となることはない．一方，$\beta(i)$ の真に有限な側に対応する逸脱量は，$x_{B,i}(M)=p_i$ が定数であることと合わせて，やはり $M$ に依存しない定数である($u_{\beta(i)}=+\infty$ の場合も対称に同様)．したがって，脱退行 $r$ の逸脱量 $w_r(M)=a_rM+b_r$ は傾き $a_r=0$ の定数(通常の実数)である．
+各行 $i$ について，$\beta(i)$ が非有界な側を持つ場合(たとえば $l_{\beta(i)}=-\infty$)，対応する逸脱量 $v_i^-(M)=\hat l_{\beta(i)}(M)-x_{B,i}(M)=(-M)-x_{B,i}^0$ は傾き $-1$ を持ち，$M\to\infty$ で $-\infty$ に発散するから，いかなる $M^\dagger$ に対しても $M\ge M^\dagger$ で $v_i^-\succ0$ となることはない．一方，$\beta(i)$ の真に有限な側に対応する逸脱量は，$x_{B,i}(M)=x_{B,i}^0$ が定数であることと合わせて，やはり $M$ に依存しない定数である($u_{\beta(i)}=+\infty$ の場合も対称に同様)．したがって，脱退行 $r$ の逸脱量 $w_r(M)=w_r^1M+w_r^0$ は傾き $w_r^1=0$ の定数(通常の実数)である．
 
 (i) \textbf{脱退変数が真に有限な境界に固定されること}：$w_r(M)$ が定数であることから，$r$ は必ず $\beta(r)$ の真に有限な側の逸脱によって選ばれる(非有界側の逸脱量は上で見た通り傾き $-1$ で発散し，$\succ0$ になり得ない)．Step~2(d)のピボットにより，$\beta(r)$ はその真に有限な境界に固定されて非基底化する．
 
-(ii) \textbf{BFRTのフリップが非有界側の変数を対象としないこと}：BFRTを用いる場合，各候補 $j_i$ の寄与 $\mathrm{cap}_{j_i}(M)=|\hat\alpha_{j_i}|(\omega_{j_i}+s_{j_i}M)$ は，$s_{j_i}\ge1$(片側のみ非有界，または自由変数)ならば傾き $|\hat\alpha_{j_i}|s_{j_i}>0$ を持つ．累積容量 $C_k(M)=\sum_{i\le k}\mathrm{cap}_{j_i}(M)$ は各項の傾きが非負であるから，$s_{j_i}\ge1$ なる候補 $j_i$ が累積に加わった時点以降，$C_k(M)$($k\ge i$)は傾き正となり $M\to\infty$ で $+\infty$ に発散する．一方 $w_r(M)$ は(i)で見た通り定数であるから，$C_i(M)\succ w_r(M)$ が成り立ち，命題~\ref{prop:bfrt}の $k^\ast:=\min\{k:\neg(w_r\succ C_k)\}$ の定義より $k^\ast\le i$ である．すなわち，$s_{j_i}\ge1$ なる候補 $j_i$ は，実際にフリップされる集合 $\{j_1,\dots,j_{k^\ast-1}\}$ には決して含まれない．したがって，フリップされる非基底変数はすべて両側有限($s_j=0$)な変数に限られ，フリップ後もその変数は(もう一方の，やはり真に有限な境界に移るだけなので)$\delta_j=0$ のままである．また，加入変数 $q=j_{k^\ast}$ が $s_q\ge1$ である場合も，$q$ はフリップされるのではなく通常のピボットによって基底化するから，非基底集合から除かれる．$\mathrm{Eligible}$ が状態 $Z$ の変数を含む場合はフリップが行われず，その変数が基底化するだけである．
+(ii) \textbf{BFRTのフリップが非有界側の変数を対象としないこと}：BFRTを用いる場合，各候補 $j_i$ の寄与 $\mathrm{cap}_{j_i}(M)=|\hat\alpha_{j_i}|(\omega_{j_i}+s_{j_i}M)$ は，$s_{j_i}\ge1$(片側のみ非有界，または自由変数)ならば傾き $|\hat\alpha_{j_i}|s_{j_i}>0$ を持つ．累積容量 $C_k(M)=\sum_{i\le k}\mathrm{cap}_{j_i}(M)$ は各項の傾きが非負であるから，$s_{j_i}\ge1$ なる候補 $j_i$ が累積に加わった時点以降，$C_k(M)$($k\ge i$)は傾き正となり $M\to\infty$ で $+\infty$ に発散する．一方 $w_r(M)$ は(i)で見た通り定数であるから，$C_i(M)\succ w_r(M)$ が成り立ち，命題~\ref{prop:bfrt}の $k^\ast:=\min\{k:\neg(w_r\succ C_k)\}$ の定義より $k^\ast\le i$ である．すなわち，$s_{j_i}\ge1$ なる候補 $j_i$ は，実際にフリップされる集合 $\{j_1,\dots,j_{k^\ast-1}\}$ には決して含まれない．したがって，フリップされる非基底変数はすべて両側有限($s_j=0$)な変数に限られ，フリップ後もその変数は(もう一方の，やはり真に有限な境界に移るだけなので)$x_j^1=0$ のままである．また，加入変数 $q=j_{k^\ast}$ が $s_q\ge1$ である場合も，$q$ はフリップされるのではなく通常のピボットによって基底化するから，非基底集合から除かれる．$\mathrm{Eligible}$ が状態 $Z$ の変数を含む場合はフリップが行われず，その変数が基底化するだけである．
 
-(iii) \textbf{結論}：ピボットで基底化する加入変数 $q$ は非基底集合から除かれ，(i)によりピボットで非基底化する $\beta(r)$ は真に有限な境界に固定され，(ii)によりフリップされる変数は両側有限なものに限られてフリップ後も $\delta_j=0$ のままであり，その他の非基底変数はこの反復によって状態を変えない．したがって $(B^{(k+1)},\eta^{(k+1)})$ の非基底変数もすべて $\delta_j=0$ である．
+(iii) \textbf{結論}：ピボットで基底化する加入変数 $q$ は非基底集合から除かれ，(i)によりピボットで非基底化する $\beta(r)$ は真に有限な境界に固定され，(ii)によりフリップされる変数は両側有限なものに限られてフリップ後も $x_j^1=0$ のままであり，その他の非基底変数はこの反復によって状態を変えない．したがって $(B^{(k+1)},\eta^{(k+1)})$ の非基底変数もすべて $x_j^1=0$ である．
 \end{proof}
 
-\begin{remark}[吸収境界としての $\delta=0$ と実装上の帰結]
+\begin{remark}[吸収境界としての $x_N^1=0$ と実装上の帰結]
 \label{rem:absorbing}
-命題~\ref{prop:no-return}の証明から，$\delta=0$ に達した時点以降は，逸脱量がすべて $M$ に依存しない定数となり，Step~2の判定(主実行可能性の判定，脱退行の選択，比検定，BFRT)は真の上下限 $l,u$ に関する第\ref{sec:dual-simplex}節の双対単体法の判定と完全に一致する．すなわち $\delta=0$ への到達は，以後の挙動を古典的双対単体法に一致させる吸収境界(absorbing boundary)として機能する．したがって実装においては，$\delta=0$ が成立した時点で，量を $M$ のアフィン関数(傾き・切片の組)として保持・比較する処理を打ち切り，通常の実数値のみを用いる計算経路へ切り替えてよい．この切り替えは近似を伴わない厳密な同値変形である．
+命題~\ref{prop:no-return}の証明から，$x_N^1=0$ に達した時点以降は，逸脱量がすべて $M$ に依存しない定数となり，Step~2の判定(主実行可能性の判定，脱退行の選択，比検定，BFRT)は真の上下限 $l,u$ に関する第\ref{sec:dual-simplex}節の双対単体法の判定と完全に一致する．すなわち $x_N^1=0$ への到達は，以後の挙動を古典的双対単体法に一致させる吸収境界(absorbing boundary)として機能する．したがって実装においては，$x_N^1=0$ が成立した時点で，量を $M$ のアフィン関数(傾き・切片の組)として保持・比較する処理を打ち切り，通常の実数値のみを用いる計算経路へ切り替えてよい．この切り替えは近似を伴わない厳密な同値変形である．
 \end{remark}
 
-\begin{remark}[$z_1=0$ 到達後の反復について]
+\begin{remark}[$z^1=0$ 到達後の反復について]
 \label{rem:z1zero}
-現在の状態における $z(M)$ の傾き $z_1=\sum_{j\in N}\delta_j\bar c_j$ は，双対実行可能性より各項が非正であり，$-z_1$ は元問題~\eqref{eq:lp}に対する双対の非実行可能性(非有界側に置かれた非基底変数の被約費用の絶対値の和)にあたる．初期状態では $z_1=-\sum_{j\in S}|c_j|$ である．双対単体法の各反復は十分大きなすべての $M$ で目的関数値を減少させないから，$(z_1,z_0)$ は辞書式に非減少であり，とくに $z_1$ は単調非減少で，一度 $0$ に達すれば以後 $0$ のままである．すなわち拡張双対単体法は，$z_1<0$ の間は双対のフェーズ1(双対非実行可能性の解消)に，$z_1=0$ に達して以降は元の目的関数の最適化，すなわち古典的双対単体法(フェーズ2)に実質的に相当する．とくに $S=\emptyset$ ならば，初期状態ですでに後者の局面にある．ただし，反復列そのものが古典的双対単体法と完全に一致するのは $\delta=0$ に達して以降であり(注~\ref{rem:absorbing})，$z_1=0$ かつ $\delta\neq0$ の間は，人工境界上に被約費用 $0$ の非基底変数が残っている．
+現在の状態における $z(M)$ の傾き $z^1=\sum_{j\in N}x_j^1\bar c_j$ は，双対実行可能性より各項が非正であり，$-z^1$ は元問題~\eqref{eq:lp}に対する双対の非実行可能性(非有界側に置かれた非基底変数の被約費用の絶対値の和)にあたる．初期状態では $z^1=-\sum_{j\in S}|c_j|$ である．双対単体法の各反復は十分大きなすべての $M$ で目的関数値を減少させないから，$(z^1,z^0)$ は辞書式に非減少であり，とくに $z^1$ は単調非減少で，一度 $0$ に達すれば以後 $0$ のままである．すなわち拡張双対単体法は，$z^1<0$ の間は双対のフェーズ1(双対非実行可能性の解消)に，$z^1=0$ に達して以降は元の目的関数の最適化，すなわち古典的双対単体法(フェーズ2)に実質的に相当する．とくに $S=\emptyset$ ならば，初期状態ですでに後者の局面にある．ただし，反復列そのものが古典的双対単体法と完全に一致するのは $x_N^1=0$ に達して以降であり(注~\ref{rem:absorbing})，$z^1=0$ かつ $x_N^1\neq0$ の間は，人工境界上に被約費用 $0$ の非基底変数が残っている．
 \end{remark}
 
 \begin{remark}[保証付きクラッシュ手続きとしての解釈]
-双対実行可能性の条件は被約費用の符号のみで決まり $M$ に依存しないから，Step~2の反復は当初から一貫して元問題~\eqref{eq:lp}に対しても双対実行可能である．Step~2が実際に解消しているのは，非基底変数の一部が人工的な $\pm M$ に置かれているという一点($\delta\neq0$)に過ぎない．この観点に立てば，Step~2(補題~\ref{lem:cleanup}の後処理を含む)は，元問題に対して双対実行可能かつ非基底変数がすべて有限境界に置かれた開始基底を得るための\emph{クラッシュ手続き}とみなせる．第\ref{sec:general-difficulty}節の古典的なクラッシュ手続きがヒューリスティックで実行可能性の保証を持たないのに対し，この手続きは巡回防止規則(第\ref{sec:anticycling}節)のもとで\emph{必ず}有限回で $\delta=0$ に到達し(または非有界性・実行不可能性を検出し)，命題~\ref{prop:no-return}により一旦到達すれば後戻りしない．
+双対実行可能性の条件は被約費用の符号のみで決まり $M$ に依存しないから，Step~2の反復は当初から一貫して元問題~\eqref{eq:lp}に対しても双対実行可能である．Step~2が実際に解消しているのは，非基底変数の一部が人工的な $\pm M$ に置かれているという一点($x_N^1\neq0$)に過ぎない．この観点に立てば，Step~2(補題~\ref{lem:cleanup}の後処理を含む)は，元問題に対して双対実行可能かつ非基底変数がすべて有限境界に置かれた開始基底を得るための\emph{クラッシュ手続き}とみなせる．第\ref{sec:general-difficulty}節の古典的なクラッシュ手続きがヒューリスティックで実行可能性の保証を持たないのに対し，この手続きは巡回防止規則(第\ref{sec:anticycling}節)のもとで\emph{必ず}有限回で $x_N^1=0$ に到達し(または非有界性・実行不可能性を検出し)，命題~\ref{prop:no-return}により一旦到達すれば後戻りしない．
 \end{remark}
 
 \begin{remark}[コストシフト法との比較]
 双対単体法の開始時に広く用いられる技法に\emph{コストシフト法}(cost shifting)\cite{maros2003}がある．これは，双対実行可能性の条件に違反する非基底変数のコスト $c_j$ を人工的な値に一時的に置き換えて基底を\emph{見かけ上}双対実行可能にし，この人工目的関数のもとで双対単体法を実行したのち，コストを真の値へ戻しながら追加のピボットで双対実行可能性を回復する2段階の手続きである．
 
-双対問題の側から見ると，コストシフト法と本稿の $M$ による有界化は，いずれも違反している双対制約 $\bar c_j\le0$ または $\bar c_j\ge0$ を一時的に緩和する操作である．両者の違いは，コストシフト法が双対制約の右辺 $c_j$ そのものを動かして\emph{ペナルティなしに}緩和し，後で元に戻すのに対し，本稿の有界化は違反量を人工変数として残したまま\emph{係数 $M$ のペナルティ付きで}緩和する(第\ref{sec:dual-view}節)点にある．主問題の側から見れば，本稿は目的関数を人工化せず，最初から最後まで真の $c^\top x$ を用いる．ペナルティにより双対非実行可能性の解消が目的関数に組み込まれるため，次の2点で利点が生じる．第一に，コストシフト法ではシフトを戻す段階の追加ピボット数を一般には事前に特徴づけられないのに対し，本稿の後処理は目的関数値を変えず，主・双対の実行可能性を保ったまま高々 $K$ 回のピボットで終わることが証明されている(補題~\ref{lem:cleanup})．第二に，コストシフト法ではシフトする変数と量をヒューリスティックに決めるのに対し，本稿で無限側への配置を要する変数の集合 $S$ はデータから一意に定まり，さらに元問題の3通りの場合を判別する厳密な基準(命題~\ref{prop:trichotomy})が同じ枠組みから得られる．
+双対問題の側から見ると，コストシフト法と本稿の $M$ による有界化は，いずれも違反している双対制約 $\bar c_j\le0$ または $\bar c_j\ge0$ を一時的に緩和する操作である．両者の違いは，コストシフト法が双対制約の右辺 $c_j$ そのものを動かして\emph{ペナルティなしに}緩和し，後で元に戻すのに対し，本稿の有界化は違反量を人工変数として残したまま\emph{係数 $M$ のペナルティ付きで}緩和する(後述の第\ref{sec:dual-view}節)点にある．主問題の側から見れば，本稿は目的関数を人工化せず，最初から最後まで真の $c^\top x$ を用いる．ペナルティにより双対非実行可能性の解消が目的関数に組み込まれるため，次の2点で利点が生じる．第一に，コストシフト法ではシフトを戻す段階の追加ピボット数を一般には事前に特徴づけられないのに対し，本稿の後処理は目的関数値を変えず，主・双対の実行可能性を保ったまま高々 $K$ 回のピボットで終わることが証明されている(補題~\ref{lem:cleanup})．第二に，コストシフト法ではシフトする変数と量をヒューリスティックに決めるのに対し，本稿で無限側への配置を要する変数の集合 $S$ はデータから一意に定まり，さらに元問題の3通りの場合を判別する厳密な基準(命題~\ref{prop:trichotomy})が同じ枠組みから得られる．
 \end{remark}
 
 \subsection{巡回防止：Bland則の辞書式順序への拡張}
@@ -760,10 +717,273 @@ $k\ge k_0$ に関する帰納法で示す．$k=k_0$ では仮定により成立�
 
 すなわち，巡回防止には古典的な辞書式規則を比検定の側にのみ適用すれば足り，$M$ に関する辞書式順序 $\succ$ はそのまま用いることができる．
 
-\subsection{拡張双対単体法：まとめ}
+\section{傾き問題と切片問題への分解}
+\label{sec:two-phase}
+
+第\ref{sec:M-infty}節以降，(a$'$)(b$'$)および命題~\ref{prop:bfrt}の判定では，アフィン関数 $f^1M+f^0$ を係数対 $(f^1,f^0)$ の辞書式順序 $\succ$ で比較してきた．本節では，主反復においてはこの2つの成分が同時に効く場面が本質的になく，反復が「傾き $f^1$ のみで比較する局面」と「傾きが固定されたまま切片 $f^0$ で比較する局面」にちょうど分かれることを示す．
+
+\subsection{傾き問題}
+\label{sec:slope}
+各変数 $j$ に対し，上下限の傾きを
+\[
+  l_j^1 := \begin{cases} -1 & (l_j=-\infty)\\ 0 & (l_j>-\infty)\end{cases},\qquad
+  u_j^1 := \begin{cases} 1 & (u_j=+\infty)\\ 0 & (u_j<+\infty)\end{cases}
+\]
+とおき，また $l_j^0$ を $l_j>-\infty$ なら $l_j$，$l_j=-\infty$ なら $0$ とし，$u_j^0$ も同様に定める(スラック変数は $l^1=u^1=l^0=u^0=0$)．すると式~\eqref{eq:trunc}は $\hat l_j(M)=l_j^0+l_j^1M$，$\hat u_j(M)=u_j^0+u_j^1M$ と書ける．したがって，第\ref{sec:init-basis}節のゼロ固定スラック変数 $s$ を含めて書いた問題~\eqref{eq:lpM}は
+\begin{equation}
+  \min\ c^\top x \quad\text{s.t.}\quad Ax+s=b,\ \ 0\le s\le 0,\ \ l^0+l^1 M\le x\le u^0+u^1 M
+  \label{eq:lpM-slack}
+\end{equation}
+である．この右辺 $b$ と定数部分 $l^0,u^0$ を $0$ とし，$M$ の係数 $l^1,u^1$ のみを上下限として残した問題
+\begin{equation}
+  \min\ c^\top x^1 \quad\text{s.t.}\quad Ax^1+s=0,\ \ 0\le s\le 0,\ \ l^1\le x^1\le u^1
+  \label{eq:slope}
+\end{equation}
+を考え，これを\emph{傾き問題}と呼ぶ．変数を $x^1$ と書くのは，後の補題~\ref{lem:basic-slope}で見るように，その基底解がちょうど補題~\ref{lem:affine}の傾き $x^1$ に一致するからである．\eqref{eq:lpM-slack}，\eqref{eq:slope}のいずれにおいても $s$ は変数として残す．アルゴリズムの組合せ的状態 $(B,\eta)$ は $(x,s)$ の添字の上で定義され，基底 $B$ はスラック変数を含みうるからである．また $0\le s\le0$ は上下限であって，主実行可能でない基底解では基底に入った $s_i$ が $0$ 以外の値をとりうる．
+
+傾き問題は元問題の後退錐を $\|\cdot\|_\infty$ 球で切った問題であり，$x^1=0$ でつねに実行可能である．
+
+実際，元問題~\eqref{eq:lp}(前処理後の座標系)の実行可能領域を，補題~\ref{lem:union}と同じく
+\[
+  F \ :=\ \{\,x\in\R^n:\ Ax=b,\ l\le x\le u\,\}
+\]
+とおく($l_j=-\infty$ や $u_j=+\infty$ の側には制約を課さない)．各変数の上下限の種類に応じて
+\[
+  K_j :=
+  \begin{cases}
+    \{0\} & (\text{両側有限})\\
+    [0,+\infty) & (\text{下限のみ有限})\\
+    (-\infty,0] & (\text{上限のみ有限})\\
+    \R & (\text{自由変数})
+  \end{cases}
+  ,\qquad
+  C \ :=\ \{\,d:\ Ad=0,\ d_j\in K_j\ (j=1,\dots,n)\,\}
+\]
+とおく．$C$ は $F$ を定める制約系の右辺 $b$ と有限な上下限を $0$ に置き換えた集合であり，$F$ が空かどうかによらず定まる凸錐である．$F\neq\emptyset$ のとき，$C$ は $F$ の後退錐 $\mathrm{rec}(F):=\{d: x+td\in F\ (\forall x\in F,\ \forall t\ge0)\}$ に一致する(等式制約から $Ad=0$ が，各変数の上下限から $t\to\infty$ でも上下限を破らない条件 $d_j\in K_j$ が必要十分となるため)．なお後退錐は通常 $F\neq\emptyset$ に対してのみ考えられ，$F=\emptyset$ のときは定義の流儀によって $\R^n$(上の定義で条件「$\forall x\in F$」が空となる場合)にも $\emptyset$ にもなりうるが，いずれにせよ $0$ を含む錐 $C$ とは一般に一致しない．そこで以下では，$F$ が空かどうかによらず定まる $C$ を一貫して用いる．
+
+一方，$l^1,u^1$ の定義より $[l_j^1,u_j^1]$ はそれぞれ $[0,0]$，$[0,1]$，$[-1,0]$，$[-1,1]$ であり，これは $K_j\cap[-1,1]$ に等しい．$s=0$ より $Ax^1+s=0$ は $Ax^1=0$ と同値であるから，\eqref{eq:slope}の実行可能領域は
+\[
+  \{\,x^1:\ Ax^1=0,\ l^1\le x^1\le u^1\,\} \ =\ C\cap\{\,d:\|d\|_\infty\le1\,\}
+\]
+であり，$F\neq\emptyset$ ならばこれは $\mathrm{rec}(F)\cap\{\,d:\|d\|_\infty\le1\,\}$ である．\eqref{eq:lpM}において $x=Mx^1+x^0$ と書き $M$ で割って $M\to\infty$ とすれば，右辺 $b$ と有限な上下限は $0$ に，人工上下限 $\pm M$ は $\pm1$ になるから，\eqref{eq:slope}は\eqref{eq:lpM}の $M\to\infty$ での「傾き」を取り出した問題にあたる．錐のままでは最適値が $-\infty$ となりうるが，単位球で切ることで最適値は有限となり，後に見るようにそれは $z^1=\lim_{M\to\infty}z(M)/M$ に一致する．これは，$F\neq\emptyset$ のとき「元問題が非有界 $\iff$ $c^\top d<0$ なる $d\in C=\mathrm{rec}(F)$ が存在する $\iff$ \eqref{eq:slope}の最適値が負」という古典的な事実を通じて，命題~\ref{prop:trichotomy}(ii)(iii)の判別 $z^1<0$ / $z^1=0$ と整合する．
+
+\begin{lemma}[\eqref{eq:lpM-slack}と\eqref{eq:slope}の基底解の関係]
+\label{lem:basic-slope}
+組合せ的状態 $(B,\eta)$ を固定し，この状態に対する\eqref{eq:lpM-slack}の基底解を $x(M)=x^0+Mx^1$ と書く(補題~\ref{lem:affine})．このとき，傾き $x^1$ は同じ状態に対する\eqref{eq:slope}の基底解に一致し，切片は $x^0=x(0)$ である(いずれも $(B,\eta)$ から一意に定まる)．
+\end{lemma}
+
+\begin{proof}
+\eqref{eq:lpM-slack}と\eqref{eq:slope}は制約行列 $[\,A\mid I\,]$ を共有するから，同じ $(B,\eta)$ が両方で基底解を定める．上下限はそれぞれ $l^0+l^1 M,\,u^0+u^1 M$ と $l^1,u^1$ である．
+
+\eqref{eq:slope}の基底解を $\xi=(\xi_N,\xi_B)$ とおく．
+
+非基底部分：$\eta(j)=L$ ならば $x_j(M)=l_j^0+l_j^1M$，$\xi_j=l_j^1$ である．$\eta(j)=U$ ならば $x_j(M)=u_j^0+u_j^1M$，$\xi_j=u_j^1$ である．$\eta(j)=Z$ ならば $x_j(M)=\xi_j=0$ である．したがって $x_N(M)=x_N^0+M\xi_N$ であり，$\xi_N=x_N^1$ である．実際，$l_j^1=-1$ となるのは $l_j=-\infty$ のとき，$u_j^1=1$ となるのは $u_j=+\infty$ のときに限るから，$\xi_j$ は補題~\ref{lem:affine}の $x_j^1$ の定義に一致する．
+
+基底部分：\eqref{eq:lpM-slack}の等式制約の右辺は $b$，\eqref{eq:slope}の等式制約 $Ax^1+s=0$ の右辺は $0$ であるから，
+\[
+  x_B(M) \ =\ A_B^{-1}\bigl(b-A_Nx_N^0\bigr) + M\,A_B^{-1}\bigl(0-A_N\xi_N\bigr) \ =\ x_B^0 + M \xi_B
+\]
+であり，$\xi_B=-A_B^{-1}A_Nx_N^1=x_B^1$ である．以上より $\xi=x^1$ であり，$M=0$ とおけば $x^0=x(0)$ である．
+\end{proof}
+
+すなわち，$(B,\eta)$ を固定すると基底解は(右辺，上下限)の線形関数であり，\eqref{eq:lpM-slack}のデータは $(b,l^0,u^0)+M(0,l^1,u^1)$ と分解されるから，その $M$ の係数部分 $(0,l^1,u^1)$ をデータとする問題\eqref{eq:slope}の基底解が $x(M)$ の傾きとなる．したがって
+\begin{itemize}
+\item \eqref{eq:lpM}における逸脱量 $v_i^\pm=v_i^{\pm,1} M+v_i^{\pm,0}$ の傾き $v_i^{\pm,1}$ は，\eqref{eq:slope}における行 $i$ の逸脱量に等しい．
+\item フリップ容量 $\mathrm{cap}_j(M)$ の傾き $|\hat\alpha_j|s_j$ は，\eqref{eq:slope}におけるフリップ容量 $|\hat\alpha_j|(u_j^1-l_j^1)$ に等しい．
+\item 被約費用・比 $\hat c_j/|\hat\alpha_j|$ はコスト $c$ と基底 $B$ のみで定まるから，両問題で共通である．
+\item $z(M)=z^0+z^1M$ の傾き $z^1=c^\top x^1$ は，\eqref{eq:slope}の基底解の目的関数値に等しい．
+\end{itemize}
+
+\subsection{2段階分解}
+\label{sec:two-phase-prop}
+
+\begin{proposition}[2段階分解]
+\label{prop:two-phase}
+拡張双対単体法の組合せ的状態遷移を考え，状態 $(B,\eta)$ が
+\[
+  \text{局面A}:\ \exists i,\ v_i^{-,1}>0\ \text{または}\ v_i^{+,1}>0,\qquad
+  \text{局面B}:\ \forall i,\ v_i^{-,1}\le0\ \text{かつ}\ v_i^{+,1}\le0
+\]
+のいずれにあるかで場合分けする．
+\begin{enumerate}[label=(\roman*)]
+\item 局面Aでは，脱退行の選択を傾き $w_i^1$ のみで行い(傾きが最大の行どうしの同点は任意の決定的規則で解消)，選ばれた脱退行 $r$ の逸脱量を $w_r=w_r^1M+w_r^0$ とする(すなわち $w_r^1$ は $v_r^{-,1},v_r^{+,1}$ のうち正の方である．$v_r^{-,1}+v_r^{+,1}=l_{\beta(r)}^1-u_{\beta(r)}^1\le0$ より，両者が同時に正になることはない)．このとき，BFRTの打ち切り位置を
+\[
+  k' := \min\{\,k\ge1 : \text{$C_k$ の傾き} \ \ge\ w_r^1\,\}
+\]
+で定めても(すなわち $\succ$ の第2成分を一切用いなくても)，各反復は十分大きな $M$ に対する\eqref{eq:lpM}の双対単体法の反復として正当である．この反復はちょうど\eqref{eq:slope}に対する(BFRT付き)双対単体法であり，$\mathrm{Eligible}=\emptyset$ や $k'$ の未定義が生じることはない．局面Aは有限回で終了し，終了時の $z^1$ は\eqref{eq:slope}の最適値に等しい．
+\item 状態がひとたび局面Bに入ると，以後の反復ですべての変数の値と上下限の傾き，したがってすべての $v_i^{\pm,1}$ および $z^1$ は変化せず，局面Aに戻ることはない．
+\end{enumerate}
+\end{proposition}
+
+\begin{proof}
+(i)：局面Aで選ばれる行 $r$ は $w_r^1>0$ を満たすから $w_r\succ0$，すなわち $r\in V_\infty$ である．$k<k'$ では $C_k$ の傾きが $w_r^1$ より小さいから $w_r\succ C_k$ であり，$j_1,\dots,j_{k'-1}$ のフリップと $j_{k'}$ でのピボットは，\eqref{eq:lpM}の双対目的関数が $\theta_{j_{k'}}$ まで(十分大きな $M$ で)増加し続ける範囲で打ち切ったBFRTのステップである．BFRTは双対目的関数の傾きが正である限り任意の折れ点で打ち切ってよく(通常の比検定は $k'=1$ の場合にあたる)，双対実行可能性は保たれる．以上の判定はすべて\eqref{eq:slope}の量のみで行われるから，この反復は\eqref{eq:slope}に対する双対単体法そのものである．\eqref{eq:slope}は $x^1=0$ で実行可能であるから，その実行不可能性の証拠となる $\mathrm{Eligible}=\emptyset$ や $k'$ の未定義は起こらない．巡回防止は第\ref{sec:anticycling}節と同じ議論(\eqref{eq:slope}の目的関数値 $z^1$ が $\epsilon$ に関して辞書式に真に増加する)により従い，終了時には\eqref{eq:slope}の主実行可能性，すなわちすべての $v_i^{\pm,1}\le0$ が成り立つ．
+
+(ii)：局面Bで選ばれる行は $w_r^1=0$，$w_r^0>0$ を満たす．命題~\ref{prop:no-return}の証明(ii)と同じ議論により，$s_j\ge1$ なる候補は $C_k$ の傾きを正にするためフリップされず，フリップされるのは $s_j=0$ の変数に限られ，その傾き($x_j^1=0$)は変わらない．ピボットにおける主ステップ長は $(w_r-C_{k^\ast-1})/|\hat\alpha_q|$ であり，その傾きは $0$ であるから，基底変数の傾き $x_B^1$ も加入変数 $q$ の傾き $x_q^1$ も変わらない．脱退変数 $\beta(r)$ は逸脱していた側の境界に固定されるが，$w_r^1=0$ よりその境界の傾きは $\beta(r)$ の値の傾きに等しい．したがってすべての変数の値の傾きは不変であり，上下限の傾きはもとより不変であるから，各 $v_i^{\pm,1}$ と $z^1=c^\top(\text{傾きベクトル})$ も不変である．加入変数 $q$ については，その傾き $x_q^1$ が $l_q^1$ または $u_q^1$(状態 $Z$ なら $0$)に等しいから，新たな行の傾き $l_q^1-x_q^1$，$x_q^1-u_q^1$ はいずれも $\le0$ である．ゆえに局面Bは保たれる．
+\end{proof}
+
+\subsection{切片問題}
+\label{sec:intercept}
+命題~\ref{prop:two-phase}(ii)により，局面Bではすべての変数の値の傾きが一定である．すなわち傾き $x^1=(x_N^1,x_B^1)$ は局面Bを通じて一定である．局面Aの終了時点で $x^1$ は\eqref{eq:slope}の実行可能解であるから，$Ax^1=0$ かつ $l^1\le x^1\le u^1$ である．この $x^1$ を固定し，$x=x^0+Mx^1$ と書いて，十分大きな $M$ に対する\eqref{eq:lpM}の制約を $x^0$ に関する条件に書き直すと，問題
+\begin{equation}
+  \min\ c^\top x^0 \quad\text{s.t.}\quad Ax^0+s=b,\ \ 0\le s\le 0,\ \ l^B\le x^0\le u^B
+  \label{eq:intercept}
+\end{equation}
+\[
+  l^B_j :=
+  \begin{cases}
+    -\infty & (x_j^1>l_j^1)\\
+    l_j & (x_j^1=l_j^1=0)\\
+    0 & (x_j^1=l_j^1=-1)
+  \end{cases}
+  ,\qquad
+  u^B_j :=
+  \begin{cases}
+    +\infty & (x_j^1<u_j^1)\\
+    u_j & (x_j^1=u_j^1=0)\\
+    0 & (x_j^1=u_j^1=1)
+  \end{cases}
+\]
+を得る．これを\emph{切片問題}と呼ぶ．実際，$x_j^1>l_j^1$ ならば $x_j=x_j^0+Mx_j^1$ は十分大きな $M$ で下限 $\hat l_j(M)=l_j^0+l_j^1M$ を自動的に満たすから下限は消え，$x_j^1=l_j^1=-1$ ならば $-M\le x_j^0-M$ より $x_j^0\ge0$ が残り，$x_j^1=l_j^1=0$ ならば $l_j\le x_j^0$ がそのまま残る(上限も同様)．目的関数は $c^\top x=c^\top x^0+Mz^1$ と分解され，$z^1=c^\top x^1$ は局面Bを通じて一定である．\eqref{eq:intercept}は，元問題を方向 $x^1$ に $M$ だけずらしたときに十分大きな $M$ で実行可能であり続ける点の集合を実行可能領域とする問題である．
+
+\begin{proposition}[局面Bと古典的双対単体法の一致]
+\label{prop:phaseB}
+局面Bにおける拡張双対単体法の反復(Step~2の(a$'$)(b$'$)(c)(d)およびBFRT)は，問題~\eqref{eq:intercept}に対する第\ref{sec:dual-simplex}節の古典的双対単体法(BFRT付き)の反復と，同じ脱退行選択規則・同順位処理のもとで反復ごとに一致する．とくに，$x^1=0$ ならば\eqref{eq:intercept}は元問題~\eqref{eq:lp}そのものであり，局面Bは元問題に対する古典的双対単体法に一致する．
+\end{proposition}
+
+\begin{proof}
+組合せ的状態 $(B,\eta)$ を共有する2つの反復の各判定が一致することを示す．
+\begin{itemize}
+\item \textbf{非基底変数の位置}：非基底変数 $j$ の傾き $x_j^1$ は $l_j^1$ または $u_j^1$(状態 $Z$ なら $0$)に等しいから，$j$ は\eqref{eq:intercept}の有限な境界 $x_j^0\in\{l^B_j,u^B_j\}$ 上にある．状態 $Z$ の変数は $l_j^1=-1<0=x_j^1<1=u_j^1$ より\eqref{eq:intercept}でも自由変数であり，値 $0$ に置かれる．また基底部分は $x_B^0$ である(補題~\ref{lem:basic-slope})．
+\item \textbf{双対実行可能性と比検定}：被約費用，$\hat c_j$，比 $\hat c_j/|\hat\alpha_j|$ はコスト $c$ と基底 $B$ のみで定まり，状態 $L,U,Z$ に対する符号条件も共通であるから，両者で一致する．
+\item \textbf{逸脱行の判定と脱退行の選択}：局面Bではすべての $v_i^{\pm,1}\le0$ である．$v_i^{\pm,1}<0$ の側は，$\beta(i)$ の傾きがその側の境界の傾きから真に離れていること，すなわち\eqref{eq:intercept}でその側の境界が無限大であることと同値であり，どちらでも逸脱とみなされない．$v_i^{\pm,1}=0$ の側では，切片 $v_i^{\pm,0}$ がそのまま\eqref{eq:intercept}における逸脱量に等しい．したがって $V_\infty$ は\eqref{eq:intercept}の逸脱行の集合に一致し，$\succ$ による比較は切片の比較に帰着するから，脱退行の選択(最急辺・Devex規則の重み $\gamma_i$ は $B$ のみで定まる)も一致する．
+\item \textbf{BFRT}：$s_j=0$ の変数は $x_j^1=l_j^1=u_j^1=0$ であり，\eqref{eq:intercept}でのフリップ容量は $|\hat\alpha_j|(u_j-l_j)$，すなわち $\mathrm{cap}_j(M)$ の切片に等しい．$s_j\ge1$ の非基底変数は，その傾きが $l_j^1,u_j^1$ の一方にしか一致しないから，\eqref{eq:intercept}では他方の境界が無限大となり，フリップ容量は無限大である．これは命題~\ref{prop:two-phase}の証明(ii)で見た「$s_j\ge1$ の候補は $C_k$ の傾きを正にするためフリップされない」ことに一致する．ゆえに $k^\ast$ も一致する．
+\item \textbf{実行不可能性の判定}：$\mathrm{Eligible}=\emptyset$ あるいは $k^\ast$ の未定義は，\eqref{eq:intercept}に対する古典的双対単体法の実行不可能性の判定と同一の条件である．
+\end{itemize}
+最後に，$x^1=0$ ならば $x_j^1>l_j^1$ は $l_j^1=-1$，すなわち $l_j=-\infty$ と同値であり，$x_j^1=l_j^1=0$ は $l_j>-\infty$ と同値であるから $l^B=l$ である．同様に $u^B=u$ であり，\eqref{eq:intercept}は\eqref{eq:lp}に一致する．
+\end{proof}
+
+\begin{remark}[注~\ref{rem:absorbing}との関係]
+$x_N^1=0$ ならば $x_B^1=0$，したがって $x^1=0$ であるから，注~\ref{rem:absorbing}の「$x_N^1=0$ への到達以降は古典的双対単体法に一致する」は，命題~\ref{prop:phaseB}の $x^1=0$ の場合にあたる．一方，局面Bには $x^1\neq0$ のまま入ることがある．$z^1<0$ の場合(元問題は実行不可能または非有界)や，$z^1=0$ であっても被約費用 $0$ の非基底変数が $\pm M$ に残る場合である．このとき\eqref{eq:intercept}は，元問題の上下限の一部を取り除き，代わりに人工境界に由来する境界 $0$ を加えた問題であり，元問題とは異なる．補題~\ref{lem:cleanup}の後処理は，この $x^1$ を取り除いて\eqref{eq:intercept}から元問題~\eqref{eq:lp}へ戻る操作と解釈できる．なお局面Bで第2成分を用いる比較は切片どうしの比較のみであるから，命題~\ref{prop:phaseB}は局面Aを傾きのみで実行する変種に限らず，元の辞書式比較による拡張双対単体法についても成り立つ．
+\end{remark}
+
+\subsection{全体像：基底を受け渡しながら解く問題の連鎖}
+\label{sec:chain}
+命題~\ref{prop:two-phase}，\ref{prop:phaseB}により，拡張双対単体法は次の連鎖として理解できる．
+\begin{center}
+\begin{tabular}{llll}
+\hline
+段階 & 解く問題 & 手法 & 開始基底\\
+\hline
+局面A & 傾き問題~\eqref{eq:slope} & 双対単体法 & スラック基底(計算なしに双対実行可能)\\
+局面B & 切片問題~\eqref{eq:intercept} & 双対単体法 & 局面Aの最終基底\\
+後処理 & 元問題~\eqref{eq:lp} & primal push(補題~\ref{lem:cleanup}) & 局面Bの最終基底\\
+\hline
+\end{tabular}
+\end{center}
+局面Bが実行不可能で停止すれば元問題は実行不可能，最適で停止し $z^1<0$ ならば元問題は非有界であり，いずれもそこで終了する．$z^1=0$ の場合，$x^1=0$ ならば切片問題は元問題そのものであるから後処理は不要で(命題~\ref{prop:phaseB})，$x^1\neq0$ ならば後処理で $x^1$ を取り除く．すなわち拡張双対単体法は，「2つの LP を双対単体法で順に解き，必要ならクロスオーバーで元問題の基底に移る」手続きに同値である．
+
+基底の受け渡しが正当であるのは，3つの問題の制約行列 $A$ とコスト $c$ が共通であるため被約費用の符号条件(双対実行可能性)がそのまま引き継がれ，かつ局面Aの最終基底の非基底変数が切片問題の有限な境界上にある(命題~\ref{prop:phaseB}の証明)からである．後処理は目的関数値と主・双対の実行可能性を保つ(補題~\ref{lem:cleanup})．
+
+ただし次の2点に注意する．第一に，切片問題はデータのみからは定まらず，局面Aで得られた最適基底解 $x^1$ に依存する．傾き問題~\eqref{eq:slope}の最適解が一意でなければ，どの最適解に到達したかによって切片問題は異なる．したがって，これは固定された3つの LP を順に解く手続きではなく，前段の解が次段の問題を定める連鎖である．第二に，局面Aの同値性は，傾きのみで比較する変種(命題~\ref{prop:two-phase}(i))では厳密であるが，元の辞書式比較による版では，(1) 傾きが同点の行を切片で選び分けること，(2) BFRTで $w_r$ と $C_k$ の傾きが同点のとき切片の比較によりさらにフリップを続けること(傾き問題の上では双対目的関数が変化しない区間を進むことにあたる)の2点が，傾き問題に対する双対単体法の特定の実装上の選択にあたる．いずれも双対実行可能性を保つ正当な選択であり，同値性は同順位処理とBFRTの打ち切り位置の違いを除いて成り立つ．
+
+\begin{remark}[変数選択規則は分離によって本質的に変わらないこと]
+\label{rem:pricing}
+問題が傾き問題と切片問題に分離されるからといって，各問題に固有の変数選択規則が新たに得られるわけではない．最急辺規則の重み $\gamma_i=\sum_{j\in N}\alpha_{ij}^2$ も Devex規則の近似重みも，制約行列 $[\,A\mid I\,]$ と基底 $B$(およびピボットの履歴)のみから定まり，右辺や上下限に依存しない．3つの問題\eqref{eq:lpM-slack}，\eqref{eq:slope}，\eqref{eq:intercept}は制約行列を共有するから，同じ基底における重みは3つの問題で一致する．したがって「傾き問題に対する最急辺規則」は，元の問題の最急辺規則の重みで傾きの逸脱量 $w_i^1$ を正規化したもの，「切片問題に対する最急辺規則」は同じ重みで切片問題の逸脱量を正規化したものにほかならず，第\ref{sec:M-infty}節末の $\succ$ による規則のうち局面ごとに効く成分を取り出したものにすぎない．加入変数の比 $\hat c_j/|\hat\alpha_j|$ も $c$ と $B$ のみで定まるから同様である．重みは局面をまたいでそのまま引き継げ，局面の切り替えに再計算を要しないという実装上の利点はあるが，分離によって選択の質が改善するとは期待できない(Devex規則の基準を局面Bの開始時に取り直す余地はあるが，その効果は経験的に確かめる必要がある)．
+\end{remark}
+
+\begin{remark}[「$M$ が残っている間」では不十分であること]
+\label{rem:not-delta}
+命題~\ref{prop:two-phase}の区切りは「$x^1\neq0$ である間」ではない．$M$ が残っていても $w_i^1=0$，$w_i^0>0$ の行はありうる．たとえば
+\[
+  \min\ x_1\quad\text{s.t.}\quad x_2=5,\ \ x_1\ \text{自由},\ \ 0\le x_2\le1
+\]
+では，初期状態で $x_1=-M$($x_1^1=-1$)であるが，行1の逸脱量は $v_1^+=5$(傾き $0$)である．第1成分だけで(a$'$)を判定すると $V_\infty=\emptyset$ かつ $z^1=-1<0$ となり，実行不可能な問題を「非有界」と誤判定する．また補題~\ref{lem:cleanup}の後処理では，$t_i$ と $M$ の傾きが一致する場合や傾きの等しい $t_i$ どうしの比較で切片が必要であり，両成分を用いる辞書式比較が不可欠である．
+\end{remark}
+
+\begin{remark}[注~\ref{rem:z1zero}との関係]
+\label{rem:phaseA-z1}
+双対のフェーズ1の実体は「$z^1<0$ の間」ではなく局面A，すなわち\eqref{eq:slope}を解く過程である．局面Aの途中で $z^1=0$ となっても，双対退化なピボットにより局面Aが続くことがある．逆に局面Bでは $z^1$ が固定されるから，局面Aの終了時に $z^1<0$ であれば $z^1<0$ のまま局面Bが進み，元問題が実行不可能か非有界かは局面Bで判別される．命題~\ref{prop:two-phase}は，大$M$法が $M\to+\infty$ で2段階法に一致するという事実の双対版が，極限の目的関数値だけでなく反復の各ステップで厳密に成り立つことを示している．なお，局面Aで傾きの同点を任意に解消すると，命題~\ref{prop:consistency}の「十分大きな数値 $M$ での反復列と完全に一致する」という性質は一般に失われるが，双対実行可能性，巡回防止，および命題~\ref{prop:trichotomy}の判別はそのまま成り立つ．
+\end{remark}
+
+\section{双対問題から見た解釈}
+\label{sec:dual-view}
+
+\subsection{双対問題に対する大$M$法}
+\label{sec:dual-bigM}
+
+ここまでの構成は，双対問題の側から見ると，元問題の双対問題に古典的な大$M$法を適用し，$M$ を記号的に扱ったものに他ならない．本節ではこの対応をまとめる．
+
+非有界な側を持つ添字の集合を $J^-:=\{j:l_j=-\infty\}$，$J^+:=\{j:u_j=+\infty\}$ とおく．有界化した問題~\eqref{eq:lpM}を再掲すると
+\begin{equation}
+  \min\ c^\top x \quad \text{s.t.}\quad Ax=b,\ \hat l\le x\le \hat u
+  \tag{\ref{eq:lpM}}
+\end{equation}
+であり，式~\eqref{eq:trunc}より $\hat l_j=-M\ (j\in J^-)$，$\hat u_j=M\ (j\in J^+)$，それ以外は $\hat l_j=l_j$，$\hat u_j=u_j$ である．この問題の双対問題は，下限・上限制約に対する双対変数を $\kappa,\nu\in\R^n$ として
+\begin{align}
+  \max\quad & b^\top y+\sum_{j\notin J^-} l_j\kappa_j-\sum_{j\notin J^+} u_j\nu_j\ -\ M\Bigl(\sum_{j\in J^-}\kappa_j+\sum_{j\in J^+}\nu_j\Bigr) \label{eq:dualM}\\
+  \text{s.t.}\quad & A^\top y+\kappa-\nu=c,\quad \kappa,\nu\ge0 \notag
+\end{align}
+で与えられる(ゼロ固定スラック $s$ は主問題を変えないので，ここでは省いて考えてよい)．一方，元問題~\eqref{eq:lp}には非有界な側の上下限制約が存在しないから，その双対問題は\eqref{eq:dualM}に
+\[
+  \kappa_j=0\ \ (j\in J^-),\qquad \nu_j=0\ \ (j\in J^+)
+\]
+を課した(したがってペナルティ項が消えた)問題であり，$\bar c_j:=c_j-A_j^\top y$ に対する双対制約 $\bar c_j\le0\ (j\in J^-)$，$\bar c_j\ge0\ (j\in J^+)$ を持つ(自由変数では $\bar c_j=0$)．すなわち，$\kappa_j\ (j\in J^-)$，$\nu_j\ (j\in J^+)$ はこれらの双対制約の違反量を吸収する\emph{人工変数}であり，\eqref{eq:dualM}は元の双対問題に人工変数を導入して係数 $M$ のペナルティを課した大$M$法の問題そのものである．つまり，主問題の非有界な上下限を $\mp M$ で置き換えることは，双対問題の制約を係数 $M$ のペナルティで緩和することと双対な操作である．これは，主問題に対する大$M$法の双対問題が双対変数を $M$ で有界化した問題となるというよく知られた事実の，主と双対を入れ替えた形にあたる．
+
+さらに，主問題に対する双対単体法は，双対問題に対する主単体法を主問題のタブロー上で実行したものである\cite{lemke1954,bertsimas1997}．実際，組合せ的状態 $(B,\eta)$ に対し，相補性から定まる基底双対解を
+\[
+  y^\top=c_B^\top A_B^{-1},\qquad
+  \kappa_j=\bar c_j\ \ (j\in N,\ \eta(j)=L),\qquad
+  \nu_j=-\bar c_j\ \ (j\in N,\ \eta(j)=U)
+\]
+(その他の成分は $0$)とおくと，等式制約 $A^\top y+\kappa-\nu=c$ は自動的に満たされ，$\kappa,\nu\ge0$ はちょうど第\ref{sec:dual-simplex}節の双対実行可能性の条件に一致する．このときの\eqref{eq:dualM}の目的関数値は $b^\top y+\sum_{j\in N}\bar c_jx_j(M)$ であり，第\ref{sec:M-infty}節で見た $z(M)=z^0+z^1M$ に等しく，そのペナルティ部分は
+\[
+  -z^1 \ =\ \sum_{\substack{j\in N\cap J^-\\ \eta(j)=L}}\kappa_j\ +\sum_{\substack{j\in N\cap J^+\\ \eta(j)=U}}\nu_j ,
+\]
+すなわち人工変数の値の総和(元の双対問題に対する非実行可能性)である．したがって，本稿のアルゴリズムは，双対問題~\eqref{eq:dualM}に対して，$M$ を記号的に扱う大$M$法を主単体法で実行したものと一致する．各構成要素は次のように対応する．
+
+\begin{itemize}
+\item \textbf{自明な初期基底}(第\ref{sec:init-basis}節)：$y=0$ では $\bar c=c$ であり，人工変数が正となるのはちょうど $j\in S$ に対してで，その値は $|c_j|$ である．大$M$法において，人工変数が制約の違反を吸収することで自明な初期基底が得られるのと同じ構造である．ただし人工変数が必要となるのは，すべての行ではなく，違反している双対制約 $j\in S$ に対してのみである．また人工変数の列を陽に追加する必要はなく，主問題の非基底変数を $\mp M$ に置くことがそれを暗に表している．
+\item \textbf{非有界境界上の非基底変数}：$x_j^1\neq0$ なる非基底変数 $j$ は，人工変数 $\kappa_j$ または $\nu_j$(値 $|\bar c_j|$)が双対問題の基底に残っていることに対応する．
+\item \textbf{辞書式比較 $\succ$}(第\ref{sec:M-infty}節)：係数対 $(z^1,z^0)$ の辞書式比較は，大$M$法を $M\to+\infty$ の極限で扱うこと，すなわち人工変数の総和(双対非実行可能性)の最小化を元の目的関数に優先させる辞書式最適化\cite{sherali1983}にあたる．$M$ を非アルキメデス的な無限大として扱う大$M$法\cite{cococcioni2021}を双対問題に適用したものとみなせる．$M$ を数値として固定すれば，これは双対単体法のフェーズ1の一つとして知られる人工上下限法\cite{koberstein2007,huang2021}にあたる．大$M$法が極限で2段階法に一致すること\cite{chvatal1983,bertsimas1997}の双対版として，$\succ$ の第1成分と第2成分はそれぞれ双対のフェーズ1とフェーズ2に対応する．ただしその区切りは注~\ref{rem:z1zero}の「$z^1<0$ の間」ではなく，第\ref{sec:two-phase}節の局面A・局面Bの区切りである(第\ref{sec:dual-two-phase}節)．
+\item \textbf{3通りの場合の判別}(命題~\ref{prop:trichotomy})：停止時に $z^1<0$ であることは，十分大きなすべての $M$ で人工変数が正のまま残る，すなわち元の双対問題が実行不可能であることに対応し，$F\neq\emptyset$ と合わせて元問題の非有界性が従う．$\mathrm{Eligible}=\emptyset$ による停止は，\eqref{eq:dualM}が非有界となる場合に対応する．これらは大$M$法の古典的な判定を双対問題に適用したものである．
+\item \textbf{$M^\dagger$ の存在}(補題~\ref{lem:union})：ペナルティを課した双対制約の乗数は主変数 $x_j$ そのものであるから，$M\ge\|x\|_\infty$ ならば $x\in F_M$ となるという補題~\ref{lem:union}の議論は，ペナルティ係数が最適乗数の大きさを上回れば $L_1$ ペナルティが厳密になるという，厳密ペナルティの閾値の議論にあたる．
+\item \textbf{後処理}(補題~\ref{lem:cleanup})：$z^1=0$ かつ $x_j^1\neq0$ なる $j$ は，値 $0$ で双対問題の基底に残った人工変数に対応し，補題~\ref{lem:cleanup}はフェーズ1終了時にこれを基底から追い出す古典的な操作にあたる．教科書的な手続きでは，非零要素を持つ任意の行でピボットする．これにより双対問題の実行可能性は保たれるが，双対問題の最適性(すなわち主問題の実行可能性)は一般に失われる．補題~\ref{lem:cleanup}の主比検定は，このピボットを最適性を保つように選ぶものであり，クロスオーバー手続きの dual push にあたる(注~\ref{rem:crossover})．
+\item \textbf{非有界境界への非復帰}(第\ref{sec:no-return}節)：$x_N^1=0$ への到達は，人工変数がすべて双対問題の基底から出たことに対応し，以後の反復は元の双対問題に対する主単体法，すなわち元問題に対する古典的双対単体法となる(注~\ref{rem:absorbing})．
+\end{itemize}
+
+第\ref{sec:bfrt}節の BFRT は，双対問題の側から見れば，区分線形な双対目的関数の折れ点を1回の反復で複数通過する長ステップの比検定である．人工変数のペナルティにより，非有界な側を持つ変数の折れ点での傾きの変化に $M$ に比例する項が現れることが，フリップ容量 $\mathrm{cap}_j(M)$ の傾き $|\hat\alpha_j|s_j$ にあたる．
+
+\subsection{双対問題に対する2段階法}
+\label{sec:dual-two-phase}
+第\ref{sec:two-phase}節の分解を双対問題の側から見る．双対変数は引き続き $\kappa,\nu$ と書く．傾き問題~\eqref{eq:slope}の双対問題は
+\begin{equation}
+  \max\ -\Bigl(\sum_{j\in J^-}\kappa_j+\sum_{j\in J^+}\nu_j\Bigr)
+  \quad\text{s.t.}\quad A^\top y+\kappa-\nu=c,\ \ \kappa,\nu\ge0
+  \label{eq:dual-phase1}
+\end{equation}
+である($b=0$ および有限な上下限が $0$ であるため，目的関数には非有界な側に対応する双対変数のみが現れる)．これは\eqref{eq:dualM}からペナルティ項のみを残した問題，すなわち元の双対問題に人工変数 $\kappa_j\ (j\in J^-)$，$\nu_j\ (j\in J^+)$ を導入してその総和を最小化する，\emph{双対問題のフェーズ1}そのものである．その最適値は $z^1$ に等しい．
+
+一方，切片問題の双対問題は
+\begin{align*}
+  \max\quad & b^\top y+\sum_{j} l^B_j\kappa_j-\sum_{j} u^B_j\nu_j\\
+  \text{s.t.}\quad & A^\top y+\kappa-\nu=c,\ \ \kappa,\nu\ge0,\ \ \kappa_j=0\ (x_j^1>l_j^1),\ \ \nu_j=0\ (x_j^1<u_j^1)
+\end{align*}
+である(上下限が無限大の側の双対変数は $0$ に固定される)．相補性条件により，\eqref{eq:dual-phase1}の実行可能解 $(y,\kappa,\nu)$ が最適であることは，$x^1$ との相補性 $\kappa_j(x_j^1-l_j^1)=0$，$\nu_j(u_j^1-x_j^1)=0$ と同値である．したがって切片問題の双対問題の実行可能領域は，ちょうど\emph{双対フェーズ1の最適面}に一致する．また人工境界に由来する境界($x_j^1=l_j^1=-1$ なら $l^B_j=0$，$x_j^1=u_j^1=1$ なら $u^B_j=0$)に対応する人工変数は，この面の上で費用 $0$ の変数として残る(最適面上では人工変数の総和は $-z^1$ に固定されている)．ゆえに切片問題を解くことは，双対フェーズ1の最適面の上で元の双対目的関数を最大化すること，すなわち\emph{双対問題のフェーズ2}にあたる．切片問題で元問題の上下限の一部が消えることは，2段階法においてフェーズ1の後に被約費用が正の変数を除く(最適面に制限する)操作の双対版である．
+
+以上により，第\ref{sec:dual-bigM}節の「拡張双対単体法は双対問題に $M$ を記号的に扱う大$M$法を適用したものである」という主張は，「双対問題に2段階法を適用したものでもある」と，極限の目的関数値のレベルではなく反復のレベルで厳密に言い直すことができる．大$M$法が $M\to+\infty$ で2段階法に一致するという古典的事実\cite{chvatal1983,bertsimas1997}は通常目的関数値の比較として述べられるが，本稿の設定では，辞書式比較 $\succ$ の第1成分と第2成分がそれぞれ局面A(フェーズ1)と局面B(フェーズ2)にちょうど割り当てられ，反復列そのものが2段階法の反復列と一致する．第\ref{sec:summary}節の最終的なアルゴリズムは，この対応に基づき，辞書式比較を用いずに2つの局面を順に実行する形で与える．
+
+\section{拡張双対単体法：まとめ}
 \label{sec:summary}
 
-以上の構成要素をすべて統合し，一般の線形計画問題~\eqref{eq:lp}に対する拡張双対単体法をAlgorithm~\ref{alg:extended}としてまとめる．入力の $A,b,c,l,u$ は前処理前の元のデータでよく，自由変数も特別な前処理を要さない．Algorithm~\ref{alg:extended}は3つの局面からなる．\textbf{(I) 前処理}(第\ref{sec:shift-preprocess}節)では，片側のみ非有界な変数を平行移動する．\textbf{(II) 主反復}では，計算なしに得られる双対実行可能初期基底(第\ref{sec:init-basis}節)から出発し，数値としての $M$ を固定せずに，(a$'$)(b$'$)による脱退行の判定・選択(第\ref{sec:M-infty}節)とBFRTによる比検定・フリップ・ピボット(第\ref{sec:bfrt}節)を繰り返す．同順位は第\ref{sec:anticycling}節の規則で解消する．\textbf{(III) 終了処理}では，停止時の状態から元問題の3通りの場合を判別し(命題~\ref{prop:trichotomy})，有限最適解を持つ場合には補題~\ref{lem:cleanup}の後処理で最適基底解を構成したのち，平行移動の逆変換で元の座標系に戻す．
+以上の構成要素をすべて統合し，一般の線形計画問題~\eqref{eq:lp}に対する拡張双対単体法をAlgorithm~\ref{alg:extended}としてまとめる．第\ref{sec:M-infty}節の(a$'$)(b$'$)と命題~\ref{prop:bfrt}は，アフィン関数を係数対の辞書式順序 $\succ$ で比較する形で反復を与えたが，第\ref{sec:two-phase}節で見たように，この比較の第1成分(傾き)と第2成分(切片)は主反復の中で同時には効かない．そこでAlgorithm~\ref{alg:extended}では，主反復を辞書式比較によらず，傾き問題~\eqref{eq:slope}と切片問題~\eqref{eq:intercept}を順に解く2つの局面として実行する．入力の $A,b,c,l,u$ は前処理前の元のデータでよく，自由変数も特別な前処理を要さない．
+
+Algorithm~\ref{alg:extended}は，前処理(第\ref{sec:shift-preprocess}節)ののち，次の3段階からなる．
+\begin{itemize}
+\item \textbf{局面A(傾き問題)}：計算なしに得られる双対実行可能初期基底(第\ref{sec:init-basis}節)から出発し，傾き問題~\eqref{eq:slope}の基底解 $x^1$ のみを保持して，傾きの逸脱量 $v_i^{\pm,1}$ による脱退行の選択と，傾きのみで打ち切るBFRTを繰り返す(命題~\ref{prop:two-phase}(i))．切片 $x^0$ は保持しない．
+\item \textbf{局面B(切片問題)}：局面Aの最終基底から，切片問題~\eqref{eq:intercept}に対する通常の実数値の双対単体法(BFRT付き)を実行する(命題~\ref{prop:phaseB})．停止時に，元問題が実行不可能か，非有界か，有限な最適値を持つかを判別する(命題~\ref{prop:trichotomy})．
+\item \textbf{後処理}：有限な最適値を持ち，人工境界に非基底変数が残っている場合($x_N^1\neq0$)に限り，補題~\ref{lem:cleanup}の primal push で $M$ を含まない最適基底解を構成する．
+\end{itemize}
+最後に平行移動の逆変換で元の座標系に戻す．同順位は第\ref{sec:anticycling}節の規則で解消する．
 
 \begin{center}
 \refstepcounter{algorithm}
@@ -772,63 +992,91 @@ $k\ge k_0$ に関する帰納法で示す．$k=k_0$ では仮定により成立�
 \end{center}
 \begin{algorithmic}[1]
 
-\Statex \textbf{(I) 前処理}
+\Statex \textbf{前処理}
 \State 各 $j$ に対しシフト量 $t_j$ を計算し，$A,b,l,u \gets A,\ b-At,\ l-t,\ u-t$ と置き換える(自由変数は $t_j=0$) \Comment{第\ref{sec:shift-preprocess}節}
+\State 各 $j$ について上下限の傾き $l_j^1,u_j^1$ を定める(スラック変数は $l^1=u^1=0$) \Comment{第\ref{sec:two-phase}節}
 
-\Statex \textbf{(II) 主反復}
+\Statex \textbf{局面A：傾き問題~\eqref{eq:slope}}
 \State $B\gets\{n+1,\dots,n+m\}$(スラック添字)；各 $j=1,\dots,n$ について式~\eqref{eq:init-status}に従い $\eta(j)\gets L$ ($c_j>0$，または $c_j=0$ かつ $l_j>-\infty$)，$Z$ ($c_j=0$ かつ自由変数)，$U$ (それ以外) \Comment{計算なしに双対実行可能，命題~\ref{prop:dual-feasible-init}}
-\Repeat
-  \State $V_\infty \gets \{\,i : v_i^-\succ0 \text{ または } v_i^+\succ0\,\}$ \Comment{逸脱行の集合，(a$'$)，第\ref{sec:M-infty}節}
-  \If{$V_\infty=\emptyset$}
-    \State \textbf{break} \Comment{主実行可能 $=$ 主・双対とも実行可能 $\Rightarrow$ 最適}
+\State $x_N^1\gets$ 補題~\ref{lem:affine}の非基底の傾き；$x_B^1\gets -A_Nx_N^1$ \Comment{$A_B=I$．傾き問題の基底解 $x^1$，補題~\ref{lem:basic-slope}}
+\Loop
+  \State 各行 $i$ について $v_i^{-,1}\gets l_{\beta(i)}^1-x_{B,i}^1$，$v_i^{+,1}\gets x_{B,i}^1-u_{\beta(i)}^1$ \Comment{逸脱量の傾き}
+  \State $V_A\gets\{\,i : v_i^{-,1}>0 \text{ または } v_i^{+,1}>0\,\}$
+  \If{$V_A=\emptyset$}
+    \State \textbf{break} \Comment{傾き問題の最適基底に到達．局面Bへ}
   \EndIf
-  \State $r\gets$ 脱退行(Dantzig則・最急辺規則・Devex則のいずれかによる $\succ$-最大元；同順位は添字最小など任意の決定的規則で解消) \Comment{(b$'$)}
-  \State $d\gets$ 逸脱の方向；$\alpha^\top\gets e_r^\top A_B^{-1}A_N$；$\sigma_j,\hat\alpha_j,\hat c_j\gets\cdots$ \Comment{Step~2(c)}
-  \State $\mathrm{Eligible}\gets\{j\in N : \hat l_j<\hat u_j,\ d\,\hat\alpha_j<0\}$ \Comment{固定変数は除く，注~\ref{rem:fixed}}
+  \State $w_i^1\gets\max(v_i^{-,1},v_i^{+,1})$ として，$r\gets\operatorname{arg\,max}_{i\in V_A} w_i^1/\sqrt{\gamma_i}$ \Comment{Dantzig則は $\gamma_i\equiv1$；同順位は任意の決定的規則}
+  \State $\rho\gets+1$ ($v_r^{-,1}>0$ のとき)，$-1$ ($v_r^{+,1}>0$ のとき)；$\alpha^\top\gets e_r^\top A_B^{-1}A_N$；$\sigma_j,\hat\alpha_j,\hat c_j\gets\cdots$ \Comment{Step~2(c)}
+  \State $\mathrm{Eligible}\gets\{j\in N : l_j<u_j,\ \rho\,\hat\alpha_j<0\}$ \Comment{命題~\ref{prop:two-phase}(i)より空にならない}
+  \If{$\mathrm{Eligible}$ が状態 $Z$ の変数を含む}
+    \State $q\gets$ そのような変数の一つ；$\beta(r)\leftrightarrow q$ を交換するピボット；$B,A_B^{-1},x^1,\eta$ を更新；\textbf{continue} \Comment{比 $0$ の退化ピボット}
+  \EndIf
+  \State $\mathrm{Eligible}$ を $\theta_j:=\hat c_j/|\hat\alpha_j|$ の昇順に $j_1,\dots,j_p$ と並べる(同順位は第\ref{sec:anticycling}節の費用摂動による辞書式規則で解消)
+  \State $k'\gets\min\{\,k : \sum_{i=1}^{k}|\hat\alpha_{j_i}|s_{j_i}\ \ge\ w_r^1\,\}$ \Comment{累積フリップ容量の傾き，命題~\ref{prop:two-phase}(i)}
+  \State $j_1,\dots,j_{k'-1}$ を反対側の上下限へフリップ；$\eta$ と $x_B^1\gets x_B^1-\sum_{k<k'}\sigma_{j_k}s_{j_k}\alpha_{\cdot,j_k}$ を更新 \Comment{第\ref{sec:bfrt}節の更新式の傾き部分}
+  \State $q\gets j_{k'}$；$\beta(r)\leftrightarrow q$ を交換するピボット；$B,A_B^{-1},x^1,\eta$ を更新 \Comment{$\beta(r)$ は逸脱していた側の境界へ}
+\EndLoop
+
+\Statex \textbf{局面B：切片問題~\eqref{eq:intercept}}
+\State $z^1\gets c^\top x^1$；式~\eqref{eq:intercept}により $l^B,u^B$ を定める \Comment{以後 $x^1,z^1$ は不変，命題~\ref{prop:two-phase}(ii)}
+\State $x_N^0\gets$(状態 $L,U,Z$ に応じて $l^B_j,u^B_j,0$)；$x_B^0\gets A_B^{-1}(b-A_Nx_N^0)$ \Comment{1回の FTRAN}
+\Loop \Comment{\eqref{eq:intercept}に対する第\ref{sec:dual-simplex}節の双対単体法(BFRT付き)，命題~\ref{prop:phaseB}}
+  \State $V_B\gets\{\,i : x_{B,i}^0<l^B_{\beta(i)} \text{ または } x_{B,i}^0>u^B_{\beta(i)}\,\}$
+  \If{$V_B=\emptyset$}
+    \State \textbf{break} \Comment{切片問題の最適基底に到達}
+  \EndIf
+  \State $r\gets\operatorname{arg\,max}_{i\in V_B}\Delta_i/\sqrt{\gamma_i}$($\Delta_i$ は $l^B,u^B$ からの逸脱量)；$\rho\gets$ 逸脱の方向；$\alpha^\top,\sigma_j,\hat\alpha_j,\hat c_j\gets\cdots$
+  \State $\mathrm{Eligible}\gets\{j\in N : l^B_j<u^B_j,\ \rho\,\hat\alpha_j<0\}$
   \If{$\mathrm{Eligible}=\emptyset$}
     \State \Return 「元問題は実行不可能」 \Comment{命題~\ref{prop:trichotomy}(i)}
   \EndIf
   \If{$\mathrm{Eligible}$ が状態 $Z$ の変数を含む}
-    \State $q\gets$ そのような変数の一つ；$\beta(r)\leftrightarrow q$ を交換するピボット；$B,A_B^{-1},x_B,x_N,\eta$ を更新；\textbf{continue} \Comment{比 $0$ の退化ピボット}
+    \State $q\gets$ そのような変数の一つ；$\beta(r)\leftrightarrow q$ を交換するピボット；$B,A_B^{-1},x^0,\eta$ を更新；\textbf{continue}
   \EndIf
-  \State $\mathrm{Eligible}$ を $\theta_j:=\hat c_j/|\hat\alpha_j|$ の昇順に $j_1,\dots,j_p$ と並べる(同順位は第\ref{sec:anticycling}節の費用摂動による辞書式規則で解消) \Comment{BFRT，第\ref{sec:bfrt}節}
-  \State $C_0\gets(0,0)$(傾き，切片の係数対)；$k^\ast\gets$ 未定義
-  \For{$k=1,\dots,p$}
-    \State $C_k \gets C_{k-1} + \bigl(|\hat\alpha_{j_k}|s_{j_k},\ |\hat\alpha_{j_k}|\omega_{j_k}\bigr)$ \Comment{$\mathrm{cap}_{j_k}$ の係数を加算}
-    \If{$\neg(w_r\succ C_k)$}
-      \State $k^\ast\gets k$；\textbf{break} \Comment{$j_{k+1},\dots,j_p$ は調べる必要がない}
-    \EndIf
-  \EndFor
+  \State $\mathrm{Eligible}$ を $\theta_j$ の昇順に $j_1,\dots,j_p$ と並べる(同順位は第\ref{sec:anticycling}節の規則)
+  \State $k^\ast\gets\min\{\,k : \sum_{i=1}^{k}|\hat\alpha_{j_i}|(u^B_{j_i}-l^B_{j_i})\ \ge\ \Delta_r\,\}$ \Comment{$s_j\ge1$ の変数の容量は $+\infty$}
   \If{$k^\ast$ が未定義}
-    \State \Return 「元問題は実行不可能」 \Comment{$\mathrm{Eligible}$ を尽くしても解消不能，命題~\ref{prop:bfrt}(ii)}
+    \State \Return 「元問題は実行不可能」 \Comment{$\mathrm{Eligible}$ を尽くしても解消不能}
   \EndIf
-  \For{$k=1,\dots,k^\ast-1$}
-    \State $j_k$ を反対側の上下限へフリップ；$p,g,x_N,\eta$ を更新 \Comment{命題~\ref{prop:bfrt}(i)直後の更新式}
-  \EndFor
-  \State $q\gets j_{k^\ast}$；$\beta(r)\leftrightarrow q$ を交換するピボット；$B,A_B^{-1},x_B,x_N,\eta$ を更新 \Comment{Step~2(d)}
-\Until{false}
-
-\Statex \textbf{(III) 終了処理}
-\State $z_1 \gets c_N^\top\delta - c_B^\top g$ \Comment{最終状態 $(B^\ast,\eta^\ast)$ における補題~\ref{lem:affine}の係数}
-\If{$z_1<0$}
+  \State $j_1,\dots,j_{k^\ast-1}$ を反対側の上下限へフリップ；$q\gets j_{k^\ast}$；$\beta(r)\leftrightarrow q$ を交換するピボット；$B,A_B^{-1},x^0,\eta$ を更新
+\EndLoop
+\If{$z^1<0$}
   \State \Return 「元問題は実行可能かつ非有界」 \Comment{命題~\ref{prop:trichotomy}(ii)}
-\Else
-  \State $z_0 \gets c_B^\top p + c_N^\top x_N^0$ \Comment{命題~\ref{prop:trichotomy}(iii)，最適値}
-  \While{$\delta_j\neq0$ なる非基底変数 $j$ が存在する} \Comment{高々 $K$ 回}
-    \State そのような $j$ を一つ選び，補題~\ref{lem:cleanup}の主比検定で $t^\ast$ を求める($M$ のアフィン関数の $\succ$ 比較)
-    \If{$t^\ast=M$}
-      \State $x_j$ を有限な側(自由変数なら状態 $Z$，値 $0$)に置く \Comment{基底は不変，注~\ref{rem:state-F}}
-    \Else
-      \State $t^\ast=t_r$ となる行 $r$ で $\beta(r)\leftrightarrow j$ を交換するピボット；$\beta(r)$ を到達した有限境界に固定
-    \EndIf
-    \State $p,g,x_N,\eta$(ピボットした場合は $B,A_B^{-1}$ も)を更新 \Comment{目的関数値・主実行可能性・双対実行可能性はすべて不変}
-  \EndWhile
-  \State $x^{\ast\ast}\gets$ 得られた基底解($\delta=0$ ゆえ $g=0$，$M$ を含まない) \Comment{元問題の最適基底解(前処理後の座標系)}
-  \State \Return $\bigl(x^{\ast\ast}+t,\ \ z_0+c^\top t\bigr)$ \Comment{平行移動の逆変換．元の座標系での最適解・最適値}
 \EndIf
+\State $z^0\gets c^\top x^0$ \Comment{命題~\ref{prop:trichotomy}(iii)，最適値}
+
+\Statex \textbf{後処理}
+\State 基底解を $x(M)=x^0+Mx^1$ とする($x^1$ は局面A，$x^0$ は局面Bの終了時のもの) \Comment{補題~\ref{lem:basic-slope}}
+\While{$x_j^1\neq0$ なる非基底変数 $j$ が存在する} \Comment{高々 $K$ 回}
+  \State そのような $j$ を一つ選び，補題~\ref{lem:cleanup}の主比検定で $t^\ast$ を求める($M$ のアフィン関数の $\succ$ 比較)
+  \If{$t^\ast=M$}
+    \State $x_j$ を有限な側(自由変数なら状態 $Z$，値 $0$)に置く \Comment{基底は不変，注~\ref{rem:state-F}}
+  \Else
+    \State $t^\ast=t_r$ となる行 $r$ で $\beta(r)\leftrightarrow j$ を交換するピボット；$\beta(r)$ を到達した有限境界に固定
+  \EndIf
+  \State $x^0,x^1,\eta$(ピボットした場合は $B,A_B^{-1}$ も)を更新 \Comment{目的関数値・主実行可能性・双対実行可能性はすべて不変}
+\EndWhile
+\State $x^{\ast\ast}\gets$ 得られた基底解 $x^0$($x^1=0$ ゆえ $M$ を含まない) \Comment{元問題の最適基底解(前処理後の座標系)}
+\State \Return $\bigl(x^{\ast\ast}+t,\ \ z^0+c^\top t\bigr)$ \Comment{平行移動の逆変換．元の座標系での最適解・最適値}
 \end{algorithmic}
 
+\paragraph{正当性．}
+局面Aの各反復は，命題~\ref{prop:two-phase}(i)により，十分大きな $M$ に対する\eqref{eq:lpM}の双対単体法の正当な反復であり，有限回で終了する．局面Bの各反復は，命題~\ref{prop:phaseB}により，第\ref{sec:M-infty}節の(a$'$)(b$'$)と命題~\ref{prop:bfrt}による反復に一致し，やはり十分大きな $M$ に対する\eqref{eq:lpM}の双対単体法の正当な反復である．したがって局面Bの停止時の状態は，十分大きなすべての $M$ で\eqref{eq:lpM}に対する双対単体法の停止状態であり，命題~\ref{prop:trichotomy}の証明がそのまま適用できる(局面Aで傾きの同点を任意に解消するため，数値の $M$ での反復列との完全な一致(命題~\ref{prop:consistency})は一般に失われるが，判別には影響しない．注~\ref{rem:phaseA-z1})．局面Bの終了時の基底解は $x(M)=x^0+Mx^1$ であり(補題~\ref{lem:basic-slope})，$z^1=0$ のとき補題~\ref{lem:cleanup}の仮定を満たすから，後処理により元問題の最適基底解が得られる．
+
+局面A・局面Bの主反復では，アフィン関数の辞書式比較 $\succ$ を一切用いない．局面Aでは傾き(整数係数の上下限 $0,\pm1$ に対する実数値)のみを，局面Bでは切片(通常の実数値)のみを比較する．$\succ$ が残るのは後処理の主比検定だけであり，そこでは $t_i$ と $M$ の傾きが一致する場合などに両成分が本質的に必要となる(注~\ref{rem:not-delta})．
+
 Algorithm~\ref{alg:extended}は，主実行可能な初期基底の構築(2段階法のフェーズ1，大$M$法，クラッシュ手続き)を一切必要とせず，コスト係数の符号のみから定まる自明な双対実行可能初期基底から出発して，元問題の判別と最適解の構成までを行う．この一連の手続き全体を通じて，数値としての $M$ を一つも固定する必要がない点が，本稿の主要な帰結である．
+
+\begin{remark}[辞書式比較による実行との比較]
+\label{rem:impl}
+Algorithm~\ref{alg:extended}を，(a$'$)(b$'$)と命題~\ref{prop:bfrt}の辞書式比較で主反復を実行する場合と比べる．反復あたりの主要な計算(BTRAN，FTRAN，ピボット行 $\alpha^\top$ の計算)は変わらず，反復回数も同点の解消法の違いを除いて同じであるから，計算量の削減は小さい．一方，次の利点がある(いずれも数値実験による検証は未実施)．
+\begin{enumerate}[label=(\alph*)]
+\item \textbf{実数計算への早期切り替え}：局面Bは，$v_i^{\pm,1}<0$ の側の上下限は存在しないものとし，$v_i^{\pm,1}=0$ の側は定数の逸脱量で判定し，$s_j\ge1$ の非基底変数はフリップ不可(容量無限大)として扱う，アフィン関数の組を保持しない通常の実数値の双対単体法である．注~\ref{rem:absorbing}の切り替え時点($x_N^1=0$ への到達)が局面Aの終了時まで早まり，$x_N^1\neq0$ のまま停止する問題(非有界な場合や後処理を要する場合)ではこの差が大きい．局面Aでは切片 $x^0$ の更新も不要で，局面Bへの移行時に1回の FTRAN で計算すればよい．
+\item \textbf{数値的頑健性}：辞書式比較 $\succ$ で必要だった，異なる行どうしの「傾きが等しいか」という浮動小数点の等号判定が不要となり，残るのは各行の $w_i^1$ の符号判定(通常の主実行可能性の許容誤差と同種)のみとなる．また\eqref{eq:slope}は右辺が $0$，上下限が $0,\pm1$ のみであり，$b$ の尺度に左右されない．
+\item \textbf{局面Aの独立性}：局面Aは独立した LP \eqref{eq:slope}を解くことに等しく，その最適基底で $c$ に関して双対実行可能なものが得られれば局面Bはそこから開始できる．\eqref{eq:slope}は $x^1=0$ で実行可能であるから，スラック基底からの主単体法で解くこともできる(ただし強く退化しており，有効かどうかは未検証)．また局面Aでは実行不可能性の検出を要しない．
+\end{enumerate}
+懸念として，局面Aで傾きの同点を切片により選び分けていた効果が失われることが反復回数に与える影響は，経験的に確認する必要がある．
+\end{remark}
 
 \begin{thebibliography}{99}
 
@@ -928,187 +1176,5 @@ E.~D.~Andersen, Y.~Ye,
 \textit{Management Science}, 42(12), 1719--1731, 1996.
 
 \end{thebibliography}
-
-%% ================================================================
-%% 【下書き】辞書式比較の2段階分解(本文へ組み込むかは未定)
-%% ================================================================
-\clearpage
-\section*{【下書き】辞書式比較 $\succ$ の2段階分解}
-\label{sec:draft-two-phase}
-
-第\ref{sec:M-infty}節以降，(a$'$)(b$'$)および命題~\ref{prop:bfrt}の判定では，アフィン関数 $aM+b$ を係数対 $(a,b)$ の辞書式順序 $\succ$ で比較してきた．本節では，主反復においてはこの2つの成分が同時に効く場面が本質的になく，反復が「傾き $a$ のみで比較する局面」と「傾きが固定されたまま切片 $b$ で比較する局面」にちょうど分かれることを示す．
-
-\paragraph{傾きの問題．}
-各変数 $j$ に対し，上下限の傾きを
-\[
-  \lambda_j := \begin{cases} -1 & (l_j=-\infty)\\ 0 & (l_j>-\infty)\end{cases},\qquad
-  \mu_j := \begin{cases} 1 & (u_j=+\infty)\\ 0 & (u_j<+\infty)\end{cases}
-\]
-とおく(スラック変数は $\lambda=\mu=0$)．すなわち $\hat l_j(M)=\lambda_jM+(\text{定数})$，$\hat u_j(M)=\mu_jM+(\text{定数})$ である(前処理により有限側は $0$)．これを上下限とし，右辺を $0$ とした問題
-\begin{equation}
-  \min\ c^\top d \quad\text{s.t.}\quad Ad+s=0,\ \ s=0,\ \ \lambda\le d\le\mu
-  \label{eq:draft-cone}
-\end{equation}
-を考える．これは元問題の後退錐を $\|\cdot\|_\infty$ 球で切った問題であり，$d=0$ でつねに実行可能である．
-
-実際，元問題~\eqref{eq:lp}(前処理後の座標系)の実行可能領域を，補題~\ref{lem:union}と同じく
-\[
-  F \ :=\ \{\,x\in\R^n:\ Ax=b,\ l\le x\le u\,\}
-\]
-とおく($l_j=-\infty$ や $u_j=+\infty$ の側には制約を課さない)．各変数の上下限の種類に応じて
-\[
-  K_j :=
-  \begin{cases}
-    \{0\} & (\text{両側有限})\\
-    [0,+\infty) & (\text{下限のみ有限})\\
-    (-\infty,0] & (\text{上限のみ有限})\\
-    \R & (\text{自由変数})
-  \end{cases}
-  ,\qquad
-  C \ :=\ \{\,d:\ Ad=0,\ d_j\in K_j\ (j=1,\dots,n)\,\}
-\]
-とおく．$C$ は $F$ を定める制約系の右辺 $b$ と有限な上下限を $0$ に置き換えた集合であり，$F$ が空かどうかによらず定まる凸錐である．$F\neq\emptyset$ のとき，$C$ は $F$ の後退錐 $\mathrm{rec}(F):=\{d: x+td\in F\ (\forall x\in F,\ \forall t\ge0)\}$ に一致する(等式制約から $Ad=0$ が，各変数の上下限から $t\to\infty$ でも上下限を破らない条件 $d_j\in K_j$ が必要十分となるため)．なお後退錐は通常 $F\neq\emptyset$ に対してのみ考えられ，$F=\emptyset$ のときは定義の流儀によって $\R^n$(上の定義で条件「$\forall x\in F$」が空となる場合)にも $\emptyset$ にもなりうるが，いずれにせよ $0$ を含む錐 $C$ とは一般に一致しない．そこで以下では，$F$ が空かどうかによらず定まる $C$ を一貫して用いる．
-
-一方，$\lambda,\mu$ の定義より $[\lambda_j,\mu_j]$ はそれぞれ $[0,0]$，$[0,1]$，$[-1,0]$，$[-1,1]$ であり，これは $K_j\cap[-1,1]$ に等しい．$s=0$ より $Ad+s=0$ は $Ad=0$ と同値であるから，\eqref{eq:draft-cone}の実行可能領域は
-\[
-  \{\,d:\ Ad=0,\ \lambda\le d\le\mu\,\} \ =\ C\cap\{\,d:\|d\|_\infty\le1\,\}
-\]
-であり，$F\neq\emptyset$ ならばこれは $\mathrm{rec}(F)\cap\{\,d:\|d\|_\infty\le1\,\}$ である．\eqref{eq:lpM}において $x=Md+(\text{定数})$ と書き $M$ で割って $M\to\infty$ とすれば，右辺 $b$ と有限な上下限は $0$ に，人工上下限 $\pm M$ は $\pm1$ になるから，\eqref{eq:draft-cone}は\eqref{eq:lpM}の $M\to\infty$ での「傾き」を取り出した問題にあたる．錐のままでは最適値が $-\infty$ となりうるが，単位球で切ることで最適値は有限となり，後に見るようにそれは $z_1=\lim_{M\to\infty}z(M)/M$ に一致する．これは，$F\neq\emptyset$ のとき「元問題が非有界 $\iff$ $c^\top d<0$ なる $d\in C=\mathrm{rec}(F)$ が存在する $\iff$ \eqref{eq:draft-cone}の最適値が負」という古典的な事実を通じて，命題~\ref{prop:trichotomy}(ii)(iii)の判別 $z_1<0$ / $z_1=0$ と整合する．
-
-組合せ的状態 $(B,\eta)$ に対する\eqref{eq:draft-cone}の基底解は，非基底部分が $\delta$，基底部分が $-g$(補題~\ref{lem:affine})であり，したがって
-\begin{itemize}
-\item \eqref{eq:lpM}における逸脱量 $v_i^\pm=a_i^\pm M+b_i^\pm$ の傾き $a_i^\pm$ は，\eqref{eq:draft-cone}における行 $i$ の逸脱量に等しい．
-\item フリップ容量 $\mathrm{cap}_j(M)$ の傾き $|\hat\alpha_j|s_j$ は，\eqref{eq:draft-cone}におけるフリップ容量 $|\hat\alpha_j|(\mu_j-\lambda_j)$ に等しい．
-\item 被約費用・比 $\hat c_j/|\hat\alpha_j|$ はコスト $c$ と基底 $B$ のみで定まるから，両問題で共通である．
-\item $z(M)=z_0+z_1M$ の傾き $z_1=c_N^\top\delta-c_B^\top g$ は，\eqref{eq:draft-cone}の基底解の目的関数値に等しい．
-\end{itemize}
-
-\begin{proposition}[2段階分解]
-\label{prop:draft-two-phase}
-拡張双対単体法の組合せ的状態遷移を考え，状態 $(B,\eta)$ が
-\[
-  \text{局面A}:\ \exists i,\ a_i^->0\ \text{または}\ a_i^+>0,\qquad
-  \text{局面B}:\ \forall i,\ a_i^-\le0\ \text{かつ}\ a_i^+\le0
-\]
-のいずれにあるかで場合分けする．
-\begin{enumerate}[label=(\roman*)]
-\item 局面Aでは，脱退行の選択を傾き $a$ のみで行い(傾きが最大の行どうしの同点は任意の決定的規則で解消)，BFRTの打ち切り位置を
-\[
-  k' := \min\{\,k\ge1 : \text{$C_k$ の傾き} \ \ge\ a_r\,\}
-\]
-で定めても(すなわち $\succ$ の第2成分を一切用いなくても)，各反復は十分大きな $M$ に対する\eqref{eq:lpM}の双対単体法の反復として正当である．この反復はちょうど\eqref{eq:draft-cone}に対する(BFRT付き)双対単体法であり，$\mathrm{Eligible}=\emptyset$ や $k'$ の未定義が生じることはない．局面Aは有限回で終了し，終了時の $z_1$ は\eqref{eq:draft-cone}の最適値に等しい．
-\item 状態がひとたび局面Bに入ると，以後の反復ですべての変数の値と上下限の傾き，したがってすべての $a_i^\pm$ および $z_1$ は変化せず，局面Aに戻ることはない．
-\end{enumerate}
-\end{proposition}
-
-\begin{proof}
-(i)：局面Aで選ばれる行 $r$ は $a_r>0$ を満たすから $w_r\succ0$，すなわち $r\in V_\infty$ である．$k<k'$ では $C_k$ の傾きが $a_r$ より小さいから $w_r\succ C_k$ であり，$j_1,\dots,j_{k'-1}$ のフリップと $j_{k'}$ でのピボットは，\eqref{eq:lpM}の双対目的関数が $\theta_{j_{k'}}$ まで(十分大きな $M$ で)増加し続ける範囲で打ち切ったBFRTのステップである．BFRTは双対目的関数の傾きが正である限り任意の折れ点で打ち切ってよく(通常の比検定は $k'=1$ の場合にあたる)，双対実行可能性は保たれる．以上の判定はすべて\eqref{eq:draft-cone}の量のみで行われるから，この反復は\eqref{eq:draft-cone}に対する双対単体法そのものである．\eqref{eq:draft-cone}は $d=0$ で実行可能であるから，その実行不可能性の証拠となる $\mathrm{Eligible}=\emptyset$ や $k'$ の未定義は起こらない．巡回防止は第\ref{sec:anticycling}節と同じ議論(\eqref{eq:draft-cone}の目的関数値 $z_1$ が $\epsilon$ に関して辞書式に真に増加する)により従い，終了時には\eqref{eq:draft-cone}の主実行可能性，すなわちすべての $a_i^\pm\le0$ が成り立つ．
-
-(ii)：局面Bで選ばれる行は $a_r=0$，$b_r>0$ を満たす．命題~\ref{prop:no-return}の証明(ii)と同じ議論により，$s_j\ge1$ なる候補は $C_k$ の傾きを正にするためフリップされず，フリップされるのは $s_j=0$ の変数に限られ，その傾き($\delta_j=0$)は変わらない．ピボットにおける主ステップ長は $(w_r-C_{k^\ast-1})/|\hat\alpha_q|$ であり，その傾きは $0$ であるから，基底変数の傾き $-g$ も加入変数 $q$ の傾き $\delta_q$ も変わらない．脱退変数 $\beta(r)$ は逸脱していた側の境界に固定されるが，$a_r=0$ よりその境界の傾きは $\beta(r)$ の値の傾きに等しい．したがってすべての変数の値の傾きは不変であり，上下限の傾きはもとより不変であるから，各 $a_i^\pm$ と $z_1=c^\top(\text{傾きベクトル})$ も不変である．加入変数 $q$ については，その傾き $\delta_q$ が $\lambda_q$ または $\mu_q$(状態 $Z$ なら $0$)に等しいから，新たな行の傾き $\lambda_q-\delta_q$，$\delta_q-\mu_q$ はいずれも $\le0$ である．ゆえに局面Bは保たれる．
-\end{proof}
-
-\paragraph{局面Bで解いている問題．}
-命題~\ref{prop:draft-two-phase}(ii)により，局面Bではすべての変数の値の傾きが一定である．この傾きのベクトル(非基底部分が $\delta$，基底部分が $-g$)を $d^\ast$ とおく．局面Aの終了時点で $d^\ast$ は\eqref{eq:draft-cone}の実行可能解であるから，$Ad^\ast=0$ かつ $\lambda\le d^\ast\le\mu$ である．$x=Md^\ast+y$ と書いて，十分大きな $M$ に対する\eqref{eq:lpM}の制約を $y$ に関する条件に書き直すと，問題
-\begin{equation}
-  \min\ c^\top y \quad\text{s.t.}\quad Ay=b,\ \ l^B\le y\le u^B
-  \label{eq:draft-PB}
-\end{equation}
-\[
-  l^B_j :=
-  \begin{cases}
-    -\infty & (d^\ast_j>\lambda_j)\\
-    l_j & (d^\ast_j=\lambda_j=0)\\
-    0 & (d^\ast_j=\lambda_j=-1)
-  \end{cases}
-  ,\qquad
-  u^B_j :=
-  \begin{cases}
-    +\infty & (d^\ast_j<\mu_j)\\
-    u_j & (d^\ast_j=\mu_j=0)\\
-    0 & (d^\ast_j=\mu_j=1)
-  \end{cases}
-\]
-を得る．実際，$d^\ast_j>\lambda_j$ ならば $x_j=Md^\ast_j+y_j$ は十分大きな $M$ で下限 $\hat l_j(M)=\lambda_jM+(\text{定数})$ を自動的に満たすから下限は消え，$d^\ast_j=\lambda_j=-1$ ならば $-M\le -M+y_j$ より $y_j\ge0$ が残り，$d^\ast_j=\lambda_j=0$ ならば $l_j\le y_j$ がそのまま残る(上限も同様)．目的関数は $c^\top x=Mz_1+c^\top y$ と分解され，$z_1=c^\top d^\ast$ は局面Bを通じて一定である．\eqref{eq:draft-PB}は，元問題を方向 $d^\ast$ に $M$ だけずらしたときに十分大きな $M$ で実行可能であり続ける点の集合を実行可能領域とする問題である．
-
-\begin{proposition}[局面Bと古典的双対単体法の一致]
-\label{prop:draft-phaseB}
-局面Bにおける拡張双対単体法の反復(Step~2の(a$'$)(b$'$)(c)(d)およびBFRT)は，問題~\eqref{eq:draft-PB}に対する第\ref{sec:dual-simplex}節の古典的双対単体法(BFRT付き)の反復と，同じ脱退行選択規則・同順位処理のもとで反復ごとに一致する．とくに，$d^\ast=0$ ならば\eqref{eq:draft-PB}は元問題~\eqref{eq:lp}そのものであり，局面Bは元問題に対する古典的双対単体法に一致する．
-\end{proposition}
-
-\begin{proof}
-組合せ的状態 $(B,\eta)$ を共有する2つの反復の各判定が一致することを示す．
-\begin{itemize}
-\item \textbf{非基底変数の位置}：非基底変数 $j$ の傾き $\delta_j$ は $\lambda_j$ または $\mu_j$(状態 $Z$ なら $0$)に等しいから，$j$ は\eqref{eq:draft-PB}の有限な境界 $y_j\in\{l^B_j,u^B_j\}$ 上にある．状態 $Z$ の変数は $\lambda_j=-1<0=d^\ast_j<1=\mu_j$ より\eqref{eq:draft-PB}でも自由変数であり，値 $0$ に置かれる．また $y=x-Md^\ast$ の基底部分は切片 $p$ に等しい．
-\item \textbf{双対実行可能性と比検定}：被約費用，$\hat c_j$，比 $\hat c_j/|\hat\alpha_j|$ はコスト $c$ と基底 $B$ のみで定まり，状態 $L,U,Z$ に対する符号条件も共通であるから，両者で一致する．
-\item \textbf{逸脱行の判定と脱退行の選択}：局面Bではすべての $a_i^\pm\le0$ である．$a_i^\pm<0$ の側は，$\beta(i)$ の傾きがその側の境界の傾きから真に離れていること，すなわち\eqref{eq:draft-PB}でその側の境界が無限大であることと同値であり，どちらでも逸脱とみなされない．$a_i^\pm=0$ の側では，切片 $b_i^\pm$ がそのまま\eqref{eq:draft-PB}における逸脱量に等しい．したがって $V_\infty$ は\eqref{eq:draft-PB}の逸脱行の集合に一致し，$\succ$ による比較は切片の比較に帰着するから，脱退行の選択(最急辺・Devex規則の重み $\gamma_i$ は $B$ のみで定まる)も一致する．
-\item \textbf{BFRT}：$s_j=0$ の変数は $d^\ast_j=\lambda_j=\mu_j=0$ であり，\eqref{eq:draft-PB}でのフリップ容量は $|\hat\alpha_j|(u_j-l_j)$，すなわち $\mathrm{cap}_j(M)$ の切片に等しい．$s_j\ge1$ の非基底変数は，その傾きが $\lambda_j,\mu_j$ の一方にしか一致しないから，\eqref{eq:draft-PB}では他方の境界が無限大となり，フリップ容量は無限大である．これは命題~\ref{prop:draft-two-phase}の証明(ii)で見た「$s_j\ge1$ の候補は $C_k$ の傾きを正にするためフリップされない」ことに一致する．ゆえに $k^\ast$ も一致する．
-\item \textbf{実行不可能性の判定}：$\mathrm{Eligible}=\emptyset$ あるいは $k^\ast$ の未定義は，\eqref{eq:draft-PB}に対する古典的双対単体法の実行不可能性の判定と同一の条件である．
-\end{itemize}
-最後に，$d^\ast=0$ ならば $d^\ast_j>\lambda_j$ は $\lambda_j=-1$，すなわち $l_j=-\infty$ と同値であり，$d^\ast_j=\lambda_j=0$ は $l_j>-\infty$ と同値であるから $l^B=l$ である．同様に $u^B=u$ であり，\eqref{eq:draft-PB}は\eqref{eq:lp}に一致する．
-\end{proof}
-
-\begin{remark}[注~\ref{rem:absorbing}との関係]
-$\delta=0$ ならば $g=0$，したがって $d^\ast=0$ であるから，注~\ref{rem:absorbing}の「$\delta=0$ への到達以降は古典的双対単体法に一致する」は，命題~\ref{prop:draft-phaseB}の $d^\ast=0$ の場合にあたる．一方，局面Bには $d^\ast\neq0$ のまま入ることがある．$z_1<0$ の場合(元問題は実行不可能または非有界)や，$z_1=0$ であっても被約費用 $0$ の非基底変数が $\pm M$ に残る場合である．このとき\eqref{eq:draft-PB}は，元問題の上下限の一部を取り除き，代わりに人工境界に由来する境界 $0$ を加えた問題であり，元問題とは異なる．補題~\ref{lem:cleanup}の後処理は，この $d^\ast$ を取り除いて\eqref{eq:draft-PB}から元問題~\eqref{eq:lp}へ戻る操作と解釈できる．なお局面Bで第2成分を用いる比較は切片どうしの比較のみであるから，命題~\ref{prop:draft-phaseB}は局面Aを傾きのみで実行する変種に限らず，元の辞書式比較による拡張双対単体法についても成り立つ．
-\end{remark}
-
-\paragraph{全体像：基底を受け渡しながら解く問題の連鎖．}
-命題~\ref{prop:draft-two-phase}，\ref{prop:draft-phaseB}により，拡張双対単体法は次の連鎖として理解できる．
-\begin{center}
-\begin{tabular}{llll}
-\hline
-段階 & 解く問題 & 手法 & 開始基底\\
-\hline
-局面A & 錐問題~\eqref{eq:draft-cone} & 双対単体法 & スラック基底(計算なしに双対実行可能)\\
-局面B & $(P_B)$~\eqref{eq:draft-PB} & 双対単体法 & 局面Aの最終基底\\
-後処理 & 元問題~\eqref{eq:lp} & primal push(補題~\ref{lem:cleanup}) & 局面Bの最終基底\\
-\hline
-\end{tabular}
-\end{center}
-局面Bが実行不可能で停止すれば元問題は実行不可能，最適で停止し $z_1<0$ ならば元問題は非有界であり，いずれもそこで終了する．$z_1=0$ の場合，$d^\ast=0$ ならば $(P_B)$ は元問題そのものであるから後処理は不要で(命題~\ref{prop:draft-phaseB})，$d^\ast\neq0$ ならば後処理で $d^\ast$ を取り除く．すなわち拡張双対単体法は，「2つの LP を双対単体法で順に解き，必要ならクロスオーバーで元問題の基底に移る」手続きに同値である．
-
-基底の受け渡しが正当であるのは，3つの問題の制約行列 $A$ とコスト $c$ が共通であるため被約費用の符号条件(双対実行可能性)がそのまま引き継がれ，かつ局面Aの最終基底の非基底変数が $(P_B)$ の有限な境界上にある(命題~\ref{prop:draft-phaseB}の証明)からである．後処理は目的関数値と主・双対の実行可能性を保つ(補題~\ref{lem:cleanup})．
-
-ただし次の2点に注意する．第一に，$(P_B)$ はデータのみからは定まらず，局面Aで得られた最適基底解 $d^\ast$ に依存する．錐問題~\eqref{eq:draft-cone}の最適解が一意でなければ，どの最適解に到達したかによって $(P_B)$ は異なる．したがって，これは固定された3つの LP を順に解く手続きではなく，前段の解が次段の問題を定める連鎖である．第二に，局面Aの同値性は，傾きのみで比較する変種(命題~\ref{prop:draft-two-phase}(i))では厳密であるが，元の辞書式比較による版では，(1) 傾きが同点の行を切片で選び分けること，(2) BFRTで $w_r$ と $C_k$ の傾きが同点のとき切片の比較によりさらにフリップを続けること(錐問題の上では双対目的関数が変化しない区間を進むことにあたる)の2点が，錐問題に対する双対単体法の特定の実装上の選択にあたる．いずれも双対実行可能性を保つ正当な選択であり，同値性は同順位処理とBFRTの打ち切り位置の違いを除いて成り立つ．
-
-\paragraph{双対問題から見た解釈：双対問題に対する2段階法．}
-本段落では，\eqref{eq:draft-cone}の上下限の傾き $\lambda,\mu$ との混同を避けるため，双対変数を $\kappa,\nu$ と書く．錐問題~\eqref{eq:draft-cone}の双対問題は
-\begin{equation}
-  \max\ -\Bigl(\sum_{j\in J^-}\kappa_j+\sum_{j\in J^+}\nu_j\Bigr)
-  \quad\text{s.t.}\quad A^\top y+\kappa-\nu=c,\ \ \kappa,\nu\ge0
-  \label{eq:draft-dual-phase1}
-\end{equation}
-である($b=0$ および有限な上下限が $0$ であるため，目的関数には非有界な側に対応する双対変数のみが現れる)．これは\eqref{eq:dualM}からペナルティ項のみを残した問題，すなわち元の双対問題に人工変数 $\kappa_j\ (j\in J^-)$，$\nu_j\ (j\in J^+)$ を導入してその総和を最小化する，\emph{双対問題のフェーズ1}そのものである．その最適値は $z_1$ に等しい．
-
-一方，$(P_B)$ の双対問題は
-\begin{align*}
-  \max\quad & b^\top y+\sum_{j} l^B_j\kappa_j-\sum_{j} u^B_j\nu_j\\
-  \text{s.t.}\quad & A^\top y+\kappa-\nu=c,\ \ \kappa,\nu\ge0,\ \ \kappa_j=0\ (d^\ast_j>\lambda_j),\ \ \nu_j=0\ (d^\ast_j<\mu_j)
-\end{align*}
-である(上下限が無限大の側の双対変数は $0$ に固定される)．相補性条件により，\eqref{eq:draft-dual-phase1}の実行可能解 $(y,\kappa,\nu)$ が最適であることは，$d^\ast$ との相補性 $\kappa_j(d^\ast_j-\lambda_j)=0$，$\nu_j(\mu_j-d^\ast_j)=0$ と同値である．したがって $(P_B)$ の双対問題の実行可能領域は，ちょうど\emph{双対フェーズ1の最適面}に一致する．また人工境界に由来する境界($d^\ast_j=\lambda_j=-1$ なら $l^B_j=0$，$d^\ast_j=\mu_j=1$ なら $u^B_j=0$)に対応する人工変数は，この面の上で費用 $0$ の変数として残る(最適面上では人工変数の総和は $-z_1$ に固定されている)．ゆえに $(P_B)$ を解くことは，双対フェーズ1の最適面の上で元の双対目的関数を最大化すること，すなわち\emph{双対問題のフェーズ2}にあたる．$(P_B)$ で元問題の上下限の一部が消えることは，2段階法においてフェーズ1の後に被約費用が正の変数を除く(最適面に制限する)操作の双対版である．
-
-以上により，第\ref{sec:dual-view}節の「拡張双対単体法は双対問題に $M$ を記号的に扱う大$M$法を適用したものである」という主張は，「双対問題に2段階法を適用したものでもある」と，極限の目的関数値のレベルではなく反復のレベルで厳密に言い直すことができる．大$M$法が $M\to+\infty$ で2段階法に一致するという古典的事実\cite{chvatal1983,bertsimas1997}は通常目的関数値の比較として述べられるが，本稿の設定では，辞書式比較 $\succ$ の第1成分と第2成分がそれぞれ局面A(フェーズ1)と局面B(フェーズ2)にちょうど割り当てられ，反復列そのものが2段階法の反復列と一致する．
-
-\begin{remark}[「$M$ が残っている間」では不十分であること]
-命題~\ref{prop:draft-two-phase}の区切りは「$\delta\neq0$(あるいは $g\neq0$)である間」ではない．$M$ が残っていても $a_i=0$，$b_i>0$ の行はありうる．たとえば
-\[
-  \min\ x_1\quad\text{s.t.}\quad x_2=5,\ \ x_1\ \text{自由},\ \ 0\le x_2\le1
-\]
-では，初期状態で $x_1=-M$($\delta_1=-1$)であるが，行1の逸脱量は $v_1^+=5$(傾き $0$)である．第1成分だけで(a$'$)を判定すると $V_\infty=\emptyset$ かつ $z_1=-1<0$ となり，実行不可能な問題を「非有界」と誤判定する．また補題~\ref{lem:cleanup}の後処理では，$t_i$ と $M$ の傾きが一致する場合や傾きの等しい $t_i$ どうしの比較で切片が必要であり，両成分を用いる辞書式比較が不可欠である．
-\end{remark}
-
-\begin{remark}[注~\ref{rem:z1zero}との関係]
-双対のフェーズ1の実体は「$z_1<0$ の間」ではなく局面A，すなわち\eqref{eq:draft-cone}を解く過程である．局面Aの途中で $z_1=0$ となっても，双対退化なピボットにより局面Aが続くことがある．逆に局面Bでは $z_1$ が固定されるから，局面Aの終了時に $z_1<0$ であれば $z_1<0$ のまま局面Bが進み，元問題が実行不可能か非有界かは局面Bで判別される．命題~\ref{prop:draft-two-phase}は，大$M$法が $M\to+\infty$ で2段階法に一致するという事実の双対版が，極限の目的関数値だけでなく反復の各ステップで厳密に成り立つことを示している．なお，局面Aで傾きの同点を任意に解消すると，命題~\ref{prop:consistency}の「十分大きな数値 $M$ での反復列と完全に一致する」という性質は一般に失われるが，双対実行可能性，巡回防止，および命題~\ref{prop:trichotomy}の判別はそのまま成り立つ．
-\end{remark}
-
-\begin{remark}[実装上の含意]
-\label{rem:draft-impl}
-反復あたりの主要な計算(BTRAN，FTRAN，ピボット行 $\alpha^\top$ の計算)は変わらず，反復回数も同点の解消法の違いを除いて同じであるから，計算量の削減は小さい．一方，次の利点がある(いずれも数値実験による検証は未実施)．
-\begin{enumerate}[label=(\alph*)]
-\item \textbf{実数計算への早期切り替え}：局面Bでは傾きが固定されるから，$a_i<0$ の側の上下限は存在しないものとし，$a_i=0$ の側は定数の逸脱量で判定し，$s_j\ge1$ の非基底変数はフリップ不可(容量無限大)として扱えば，アフィン関数の組を保持しない通常の実数値の双対単体法として実行できる．注~\ref{rem:absorbing}の切り替え時点($\delta=0$ への到達)を局面Aの終了時まで早めることができ，$\delta\neq0$ のまま停止する問題(非有界な場合や後処理を要する場合)ではこの差が大きい．局面Aでは切片 $p$ の更新も不要で，局面Bへの移行時に $p=A_B^{-1}(b-A_Nx_N^0)$ を1回の FTRAN で計算し直せばよい．
-\item \textbf{数値的頑健性}：辞書式比較 $\succ$ で必要だった，異なる行どうしの「傾きが等しいか」という浮動小数点の等号判定が不要となり，残るのは各行の $a_i$ の符号判定(通常の主実行可能性の許容誤差と同種)のみとなる．また\eqref{eq:draft-cone}は右辺が $0$，上下限が $0,\pm1$ のみであり，$b$ の尺度に左右されない．
-\item \textbf{局面Aの独立性}：局面Aは独立した LP \eqref{eq:draft-cone}を解くことに等しく，その最適基底で $c$ に関して双対実行可能なものが得られれば局面Bはそこから開始できる．\eqref{eq:draft-cone}は $d=0$ で実行可能であるから，スラック基底からの主単体法で解くこともできる(ただし強く退化しており，有効かどうかは未検証)．また局面Aでは実行不可能性の検出を要しない．
-\end{enumerate}
-懸念として，局面Aで傾きの同点を切片により選び分けていた効果が失われることが反復回数に与える影響は，経験的に確認する必要がある．
-\end{remark}
 
 \end{document}
