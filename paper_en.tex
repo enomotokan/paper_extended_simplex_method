@@ -22,7 +22,7 @@
 
 \newcommand{\R}{\mathbb{R}}
 
-\title{Simultaneous Classification and Solution of Linear Optimization Problems by the Dual Simplex Method: The Slope--Intercept Two-Stage Dual Simplex Method}
+\title{Simultaneous Classification and Solution of Linear Optimization Problems by the Dual Simplex Method: The Slope--Intercept Two-Phase Dual Simplex Method}
 \author{Kan Enomoto\\(Independent researcher)\\\url{https://enomoto-math-labo.com/}}
 \date{\today}
 
@@ -941,7 +941,7 @@ As a concern, the effect on the number of iterations of losing the discriminatio
 \section{Numerical experiments}
 \label{sec:experiments}
 
-We compare ENOMOTO-Solver (implemented in Rust, with a Python interface), a solver implementing Algorithm~\ref{alg:slope-intercept}, with the dual simplex method of the open-source LP solver HiGHS\cite{huangfu2018} on a total of 120 problems from Netlib, Kennington, and Mittelmann. The aim of this section is to show that the slope--intercept two-stage dual simplex method runs at a practical speed when combined with standard techniques such as the steepest-edge rule, BFRT, and the Forrest--Tomlin update.
+We compare ENOMOTO-Solver (implemented in Rust, with a Python interface), a solver implementing Algorithm~\ref{alg:slope-intercept}, with the open-source LP solvers HiGHS\cite{huangfu2018}, CLP\cite{clp}, and SoPlex\cite{soplex}. The test set consists of 207 problems: problems with a finite optimal solution from Netlib, Kennington, and Mittelmann, together with infeasible problems and unbounded problems constructed as their duals. The aim of this section is to show that the slope--intercept two-stage dual simplex method runs at a practical speed when combined with standard techniques such as the steepest-edge rule, BFRT, and the Forrest--Tomlin update, and that distinguishing infeasibility from unboundedness takes little additional time.
 
 \subsection{Overview of the implementation}
 \label{sec:exp-impl}
@@ -965,137 +965,208 @@ By comparison with the source code of HiGHS 1.15.1, we list the main techniques 
 \item \textbf{Reuse of the pivot order}: at refactorization, the column pivot order of the previous factorization is reused as the initial order. In HiGHS, a similar mechanism is used only for hot starts.
 \item \textbf{Refactorization criteria}: every few iterations, the residual $\|A_Bx_B-\text{right-hand side}\|$ of the basic solution is checked, and a refactorization is performed when accumulation of errors is detected. In addition, we ported the HiGHS rule that schedules refactorization on the basis of an estimate of the computational cost, and tuned its thresholds on Netlib.
 \end{enumerate}
-On the other hand, HiGHS also has almost all of the presolve techniques. Parallelization, such as solving connected components in parallel, is either not triggered or shows no effect at the scale of Netlib, so we do not claim it as an effect here.
+On the other hand, HiGHS also has almost all of the presolve techniques. Parallelization, such as solving connected components in parallel, is also implemented, but its effect is not measured separately in this section (the numbers of threads used are given in Section~\ref{sec:exp-setup}).
 
 \subsection{Experimental environment and measurement}
 \label{sec:exp-setup}
 
-The computer has an AMD Ryzen 7 5700U (8 cores, 16 threads), 16\,GB of memory, and Windows 11. For HiGHS we used the Python binding highspy 1.15.1 with all default settings except for suppressing output (presolve on; the dual simplex method is the serial version). ENOMOTO-Solver was also run with all default settings. The test set consists of 120 problems in total: the 93 LP problems of Netlib\cite{gay1985}, 16 problems from the Kennington test set\cite{carolan1990}, and 11 problems from Mittelmann's LP benchmarks\cite{mittelmann} (LPopt). The 11 Mittelmann problems are those, among the 44 problems of that benchmark, that HiGHS solved within 10 minutes with its default settings.
+The computer is a laptop with an AMD Ryzen 7 5700U (8 cores, 16 threads) and 16\,GB of memory; all measurements were taken under WSL2 (Ubuntu 22.04, memory limit 12\,GB, no swap) on Windows 11. We compare with HiGHS 1.15.1 (Python binding highspy), CLP 1.17.11, and SoPlex 8.1.0. CLP and SoPlex were built from source and called from small programs that use their libraries directly. All solvers were run with their default settings except for the time limit and the number of threads (presolve is on in all of them; CLP chooses the algorithm automatically as by default, and the dual simplex method of HiGHS is the default serial version). ENOMOTO-Solver and HiGHS were given 16 threads, the number of logical CPUs; CLP and SoPlex are serial solvers. ENOMOTO-Solver was run in the mode that distinguishes infeasibility from unboundedness (that is, it proceeds to Phase B).
 
-We measure the wall-clock time of the solve call, excluding reading the MPS file and building the model. For both solvers, the time includes presolve and postsolve. The times of ENOMOTO-Solver are the median of three measurements for Netlib and Kennington, and a single measurement for Mittelmann. A time limit of 1{,}500\,s was set for cont1 and neos, but both were solved before reaching it. The times of HiGHS were measured on the same computer but at different dates and times from those of ENOMOTO-Solver. On this computer, processing speed varied by a factor of about 1.5--1.8 depending on the time of day, so the ratios to HiGHS below are only indicative. For fome13 from Mittelmann, the time of HiGHS was not measured, so this problem is excluded from the comparison with HiGHS.
+The test set consists of 207 problems in the following five sets.
+\begin{itemize}
+\item The 93 LP problems of Netlib\cite{gay1985} that have a finite optimal solution.
+\item The 29 infeasible LP problems of Netlib.
+\item 29 LP problems obtained from the above 29 problems by taking the dual of the problem with the objective set to $0$. By Farkas' lemma, if the original problem is infeasible, its dual is feasible and unbounded. However, cplex2 is extremely close to being feasible, and its dual is not numerically unbounded: HiGHS, CLP, and SoPlex all report the optimal value $0$. We therefore do not fix an expected answer for this one problem.
+\item The 16 problems of the Kennington test set\cite{carolan1990}.
+\item 40 problems of Mittelmann's LP benchmarks\cite{mittelmann} (LPopt): of the 44 publicly available problems we could obtain, we excluded the four largest ones that do not fit in the memory of this computer (thk\_48, L2CTA3D, dlr2, and Dual2\_5000, with $2.8\times10^7$--$9.3\times10^7$ nonzeros).
+\end{itemize}
 
-ENOMOTO-Solver returned an optimal solution for all 120 problems, and the relative difference from the optimal value of HiGHS, $|z_{\mathrm{ENOMOTO}}-z_{\mathrm{HiGHS}}|/\max(1,|z_{\mathrm{HiGHS}}|)$, was at most $9.8\times10^{-11}$. On the 119 problems for which HiGHS times are available, ENOMOTO-Solver was faster on 98, the geometric mean of the ratios was 0.58, and the geometric mean shifted by 100\,ms was 0.213\,s vs.\ 0.251\,s (ratio 0.85).
+We measure the wall-clock time of the solve call; it excludes reading the MPS file and building the model, and includes presolve and postsolve. Every solve is run in a fresh process, and each problem is solved three times by each solver and the median is taken (only once if the first run took 300\,s or more or failed). The order of the solvers is rotated between repetitions, and if the first run took less than 1\,s, it is discarded and measured again. The time limit is 600\,s. A problem counts as solved if the solver returns the expected status and, for an optimal status, the relative difference $|z-z^\ast|/\max(1,|z^\ast|)$ from the reference value is at most $10^{-6}$. As the reference value $z^\ast$ we take the value, among those of the solvers that report optimality, that agrees with the largest number of solvers. We report the geometric mean, the shifted geometric mean with a shift of $10$\,s, $\exp\bigl(\frac1N\sum_i\log(t_i+10)\bigr)-10$, and the total time; unsolved problems are counted at the time limit of 600\,s. As an indication of measurement noise, among the 76 cases measured three times with a median of at least 1\,s, the median of (maximum$-$minimum)/median was 2.2\% and its 90th percentile was 6.6\%.
 
-\subsection{Results on Netlib}
-\label{sec:exp-netlib}
-
-Table~\ref{tab:netlib-summary} shows the results aggregated by number of nonzeros. ENOMOTO-Solver was faster on 80 of the 93 problems; the geometric mean of the ratios was 0.56, and the geometric mean shifted by 10\,ms was 21.7\,ms vs.\ 29.0\,ms. On the other hand, the total time, which is dominated by a small number of large problems, is almost the same: 18.79\,s vs.\ 19.22\,s.
+Table~\ref{tab:summary} summarizes the results for each set.
 
 \begin{table}[htbp]
 \centering
-\caption{Comparison of computation times on the 93 Netlib problems (ENOMOTO-Solver vs.\ HiGHS). ``Ratio'' is the time of ENOMOTO-Solver divided by the time of HiGHS; a value below 1 means that ENOMOTO-Solver is faster. nnz is the number of nonzeros.}
-\label{tab:netlib-summary}
+\caption{Summary per test set (times in seconds). Unsolved problems are counted at the time limit of 600\,s in the geometric mean, the shifted geometric mean, and the total. Bold marks the best value in each set.}
+\label{tab:summary}
 \small
-\setlength{\tabcolsep}{4pt}
-\begin{tabular}{lrrrrrr}
+\begin{tabular}{llrrrr}
 \toprule
-Group & Problems & Faster & ENOMOTO [s] & HiGHS [s] & Ratio of totals & Geom. mean of ratios\\
+Test set & Solver & Solved & Geo.\ mean & Shifted geo.\ mean & Total\\
 \midrule
-$\mathrm{nnz}<5000$ & 49 & 48 & 0.186 & 0.360 & 0.52 & 0.44\\
-$5000\le\mathrm{nnz}<20000$ & 29 & 21 & 1.352 & 1.595 & 0.85 & 0.75\\
-$\mathrm{nnz}\ge20000$ & 15 & 11 & 17.249 & 17.264 & 1.00 & 0.71\\
+Netlib (93) & ENOMOTO & 93 & 0.0136 & \textbf{0.152} & \textbf{16.0}\\
+ & HiGHS & 93 & 0.0297 & 0.166 & 17.3\\
+ & CLP & 93 & \textbf{0.0108} & 0.164 & 17.5\\
+ & SoPlex & 92 & 0.0230 & 0.741 & 632\\
 \midrule
-HiGHS time $\ge0.1$\,s & 19 & 12 & 17.954 & 18.041 & 1.00 & 0.76\\
-All & 93 & 80 & 18.787 & 19.219 & 0.98 & 0.56\\
+Kennington (16) & ENOMOTO & 16 & 0.303 & \textbf{0.964} & \textbf{17.5}\\
+ & HiGHS & 16 & 0.580 & 1.68 & 34.9\\
+ & CLP & 16 & \textbf{0.293} & 1.16 & 22.4\\
+ & SoPlex & 16 & 1.44 & 5.76 & 208\\
+\midrule
+Mittelmann (40) & ENOMOTO & 12 & \textbf{367} & \textbf{377} & 19{,}024\\
+ & HiGHS & 11 & 401 & 405 & 19{,}200\\
+ & CLP & \textbf{18} & 386 & 393 & \textbf{18{,}873}\\
+ & SoPlex & 7 & 501 & 503 & 21{,}722\\
+\midrule
+Infeasible (29) & ENOMOTO & 29 & \textbf{0.00156} & \textbf{0.00597} & \textbf{0.173}\\
+ & HiGHS & 29 & 0.00749 & 0.0154 & 0.448\\
+ & CLP & 29 & 0.00490 & 0.0743 & 2.26\\
+ & SoPlex & 28 & 0.00469 & 1.53 & 600\\
+\midrule
+Unbounded (29) & ENOMOTO & 29 & 0.00740 & 0.0588 & 1.74\\
+ & HiGHS & 29 & 0.0197 & 0.335 & 12.1\\
+ & CLP & 28 & 0.0161 & 2.01 & 615\\
+ & SoPlex & 29 & \textbf{0.00639} & \textbf{0.0332} & \textbf{0.975}\\
+\midrule
+All (207) & ENOMOTO & 179 & \textbf{0.0843} & \textbf{10.6} & \textbf{19{,}060}\\
+ & HiGHS & 178 & 0.183 & 11.0 & 19{,}265\\
+ & CLP & \textbf{184} & 0.100 & 11.3 & 19{,}530\\
+ & SoPlex & 172 & 0.146 & 13.4 & 23{,}163\\
 \bottomrule
 \end{tabular}
 \end{table}
 
-Table~\ref{tab:netlib-large} lists the 19 problems for which the time of HiGHS is at least 0.1\,s. On these 19 problems, ENOMOTO-Solver was faster on 12; the geometric mean of the ratios is 0.76 and the ratio of total times is 1.00. The problems on which it is slower are pilot.ja, d2q06c (1.31--1.38 times), grow22, 25fv47, fit2p (1.14--1.22 times), dfl001, and degen3 (1.06--1.09 times).
+ENOMOTO-Solver returned no wrong answer on any of the 207 problems, and on the problems for which it reported optimality, the relative difference from the reference value was at most $9.8\times10^{-11}$. Of the 28 problems it did not solve, 26 exceeded the time limit, one ran out of memory (thk\_63), and on one it gave up for numerical reasons (set-cover-model). The other solvers returned an unexpected answer in three cases: SoPlex returned an optimal value different from the reference on pilot87 and ``optimal'' on the infeasible cplex2, and CLP returned ``optimal'' on the unbounded dual of qual. On the problems solved by both solvers, the geometric mean of the ratio of the time of ENOMOTO-Solver to that of HiGHS was 0.41 (faster on 155 of 177 problems); to CLP, 0.84 (82 of 174); and to SoPlex, 0.58 (133 of 170).
+
+\subsection{Problems with a finite optimal solution}
+\label{sec:exp-optimal}
+
+On the 93 Netlib problems, the geometric mean of the ratio of ENOMOTO-Solver to HiGHS was 0.46, and ENOMOTO-Solver was faster on 84 problems. Against CLP, however, the geometric mean of the ratio was 1.26 and ENOMOTO-Solver was faster on only 24 problems. Most Netlib problems are solved within a few milliseconds, and on such problems the small fixed cost of CLP pays off. In the shifted geometric mean and the total time, which weigh the longer problems more heavily, ENOMOTO-Solver is the smallest of the four solvers. Table~\ref{tab:netlib-large} lists the 25 problems on which some solver needed at least 0.1\,s.
 
 \begin{table}[htbp]
 \centering
-\caption{Netlib problems for which the computation time of HiGHS is at least 0.1\,s.}
+\caption{Netlib problems on which some solver needed at least 0.1\,s (times in seconds, median of three runs). $^\dagger$ indicates an optimal value different from the reference value.}
 \label{tab:netlib-large}
 \small
 \begin{tabular}{lrrrr}
 \toprule
-Problem & nnz & ENOMOTO [s] & HiGHS [s] & Ratio\\
+Problem & ENOMOTO & HiGHS & CLP & SoPlex\\
 \midrule
-dfl001 & 35632 & 7.84 & 7.17 & 1.09\\
-pilot87 & 73152 & 4.06 & 4.37 & 0.93\\
-pilot & 43167 & 0.943 & 1.15 & 0.82\\
-fit2p & 50284 & 1.28 & 1.12 & 1.14\\
-d2q06c & 32417 & 1.20 & 0.917 & 1.31\\
-maros-r7 & 144848 & 0.765 & 0.830 & 0.92\\
-greenbeb & 30877 & 0.373 & 0.425 & 0.88\\
-cycle & 20720 & 0.020 & 0.275 & 0.07\\
-greenbea & 30877 & 0.196 & 0.242 & 0.81\\
-25fv47 & 10400 & 0.226 & 0.197 & 1.15\\
-degen3 & 24646 & 0.204 & 0.193 & 1.06\\
-pilotnov & 13057 & 0.087 & 0.191 & 0.45\\
-nesm & 13288 & 0.072 & 0.171 & 0.42\\
-fit2d & 129018 & 0.078 & 0.157 & 0.50\\
-pilot.we & 9126 & 0.123 & 0.148 & 0.83\\
-80bau3b & 21002 & 0.132 & 0.135 & 0.98\\
-d6cube & 37704 & 0.075 & 0.134 & 0.56\\
-pilot.ja & 14698 & 0.149 & 0.108 & 1.38\\
-grow22 & 8252 & 0.132 & 0.108 & 1.22\\
+dfl001 & 5.87 & 5.66 & 4.63 & 13.4\\
+pilot87 & 4.02 & 4.18 & 5.98 & ---$^\dagger$\\
+fit2p & 0.976 & 0.996 & 1.29 & 2.14\\
+pilot & 0.800 & 0.962 & 0.889 & 2.65\\
+maros-r7 & 0.673 & 0.794 & 1.15 & 1.83\\
+d2q06c & 0.939 & 0.721 & 0.722 & 2.08\\
+greenbeb & 0.291 & 0.385 & 0.285 & 1.02\\
+cycle & 0.024 & 0.242 & 0.013 & 0.042\\
+greenbea & 0.158 & 0.230 & 0.166 & 2.62\\
+degen3 & 0.169 & 0.180 & 0.134 & 0.322\\
+25fv47 & 0.231 & 0.167 & 0.134 & 0.269\\
+pilotnov & 0.095 & 0.158 & 0.078 & 0.235\\
+nesm & 0.068 & 0.157 & 0.081 & 0.630\\
+fit2d & 0.076 & 0.151 & 0.070 & 0.149\\
+pilot.we & 0.130 & 0.139 & 0.130 & 0.374\\
+80bau3b & 0.117 & 0.132 & 0.080 & 0.457\\
+d6cube & 0.064 & 0.127 & 0.683 & 0.110\\
+grow22 & 0.126 & 0.102 & 0.044 & 0.246\\
+pilot.ja & 0.129 & 0.102 & 0.178 & 0.836\\
+perold & 0.082 & 0.087 & 0.084 & 0.341\\
+woodw & 0.031 & 0.078 & 0.097 & 0.157\\
+bnl2 & 0.066 & 0.075 & 0.035 & 0.383\\
+fit1p & 0.065 & 0.067 & 0.026 & 0.122\\
+scsd8 & 0.100 & 0.057 & 0.023 & 0.087\\
+stocfor2 & 0.023 & 0.043 & 0.029 & 0.177\\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\subsection{Comparison on large-scale problems}
-\label{sec:exp-large}
-
-Table~\ref{tab:kennington} shows the results on the 16 problems of the Kennington test set. Both solvers returned optimal solutions for all 16 problems, and the relative difference of optimal values was at most $3.1\times10^{-15}$. ENOMOTO-Solver was faster on 13 problems; the geometric mean of the ratios was 0.48, and the total time was 18.01\,s vs.\ 43.61\,s. In particular, on the four osa problems the ratios are 0.08--0.22, a large speedup. On the other hand, it is 1.14--1.30 times slower on pds-20, cre-a, and cre-d.
+Table~\ref{tab:kennington} shows the results on the 16 problems of the Kennington test set. All four solvers solved all 16 problems. The geometric mean of ENOMOTO-Solver is almost the same as that of CLP (0.303\,s vs.\ 0.293\,s), and its shifted geometric mean and total time are the smallest of the four. In particular, on the four osa problems it needed 0.09--0.2 times the time of HiGHS and 0.4--0.8 times that of CLP. On the other hand, on ken-18 and pds-20 it is much slower than HiGHS or CLP.
 
 \begin{table}[htbp]
 \centering
-\caption{Comparison of computation times on the Kennington test set. $m,n$ are the numbers of rows and columns of the original problem, and nnz is the number of nonzeros in the constraint matrix. The times of ENOMOTO-Solver are the median of three measurements.}
+\caption{Computation times on the Kennington test set (seconds, median of three runs). $m,n$ are the numbers of rows and columns of the original problem, and nnz is the number of nonzeros of the constraint matrix.}
 \label{tab:kennington}
 \small
-\begin{tabular}{lrrrrrr}
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lrrrrrrr}
 \toprule
-Problem & $m$ & $n$ & nnz & ENOMOTO [s] & HiGHS [s] & Ratio\\
+Problem & $m$ & $n$ & nnz & ENOMOTO & HiGHS & CLP & SoPlex\\
 \midrule
-cre-a & 3516 & 4067 & 14987 & 0.091 & 0.076 & 1.20\\
-cre-b & 9648 & 72447 & 256095 & 1.66 & 1.72 & 0.97\\
-cre-c & 3068 & 3678 & 13244 & 0.082 & 0.101 & 0.81\\
-cre-d & 8926 & 69980 & 242646 & 0.864 & 0.757 & 1.14\\
-ken-07 & 2426 & 3602 & 8404 & 0.013 & 0.026 & 0.48\\
-ken-11 & 14694 & 21349 & 49058 & 0.193 & 0.249 & 0.78\\
-ken-13 & 28632 & 42659 & 97246 & 0.912 & 1.02 & 0.89\\
-ken-18 & 105127 & 154699 & 358171 & 7.74 & 10.77 & 0.72\\
-osa-07 & 1118 & 23949 & 143694 & 0.057 & 0.256 & 0.22\\
-osa-14 & 2337 & 52460 & 314760 & 0.177 & 0.996 & 0.18\\
-osa-30 & 4350 & 100024 & 600138 & 0.488 & 4.36 & 0.11\\
-osa-60 & 10280 & 232966 & 1397793 & 1.57 & 19.25 & 0.08\\
-pds-02 & 2953 & 7535 & 16390 & 0.025 & 0.127 & 0.19\\
-pds-06 & 9881 & 28655 & 62524 & 0.209 & 0.443 & 0.47\\
-pds-10 & 16558 & 48763 & 106436 & 0.622 & 0.923 & 0.67\\
-pds-20 & 33874 & 105728 & 230200 & 3.31 & 2.54 & 1.30\\
+cre-a & 3516 & 4067 & 14987 & 0.084 & 0.089 & 0.044 & 0.118\\
+cre-b & 9648 & 72447 & 256095 & 1.41 & 1.29 & 1.35 & 3.81\\
+cre-c & 3068 & 3678 & 13244 & 0.074 & 0.077 & 0.043 & 0.080\\
+cre-d & 8926 & 69980 & 242646 & 0.733 & 0.629 & 0.553 & 2.28\\
+ken-07 & 2426 & 3602 & 8404 & 0.015 & 0.038 & 0.011 & 0.043\\
+ken-11 & 14694 & 21349 & 49058 & 0.156 & 0.238 & 0.130 & 1.27\\
+ken-13 & 28632 & 42659 & 97246 & 0.824 & 0.783 & 0.372 & 6.53\\
+ken-18 & 105127 & 154699 & 358171 & 7.66 & 4.29 & 2.48 & 128\\
+osa-07 & 1118 & 23949 & 143694 & 0.045 & 0.226 & 0.054 & 0.184\\
+osa-14 & 2337 & 52460 & 314760 & 0.134 & 0.871 & 0.183 & 1.06\\
+osa-30 & 4350 & 100024 & 600138 & 0.476 & 4.12 & 0.675 & 5.50\\
+osa-60 & 10280 & 232966 & 1397793 & 1.71 & 18.7 & 4.19 & 36.9\\
+pds-02 & 2953 & 7535 & 16390 & 0.031 & 0.100 & 0.023 & 0.066\\
+pds-06 & 9881 & 28655 & 62524 & 0.187 & 0.384 & 0.257 & 0.793\\
+pds-10 & 16558 & 48763 & 106436 & 0.557 & 0.719 & 0.863 & 2.38\\
+pds-20 & 33874 & 105728 & 230200 & 3.38 & 2.33 & 11.2 & 19.6\\
 \bottomrule
 \end{tabular}
 \end{table}
 
-Table~\ref{tab:mittelmann} shows the results on the 11 problems from Mittelmann's LP benchmarks. ENOMOTO-Solver returned an optimal solution for all 11 problems, and the relative difference from the optimal value of HiGHS was at most $1.1\times10^{-11}$. On the 10 problems for which HiGHS times are available, ENOMOTO-Solver was faster on 5; the geometric mean of the ratios was 1.02, and the total time was 1889\,s vs.\ 1669\,s (ratio 1.13). The problems on which it is slower are neos, cont1 (1.55--1.57 times), and pds-100 (1.18 times), and the difference in total time arises almost entirely from these three problems.
+Table~\ref{tab:mittelmann} shows the 22 of the 40 Mittelmann problems that some solver solved within 600\,s; no solver solved the remaining 18. CLP solved the most problems (18), followed by ENOMOTO-Solver (12), HiGHS (11), and SoPlex (7), while ENOMOTO-Solver has the smallest shifted geometric mean. Only ENOMOTO-Solver solved physiciansched3-3 (515\,s), and on neos-5052403-cygnet and fome13 it needed about 0.03 times and at most 0.22 times, respectively, the time of the other solvers that solved them. Conversely, it did not solve neos within the time limit (SoPlex needed 54.7\,s), and on cont1 and square41 it needed 1.6--2.1 times the time of HiGHS.
 
 \begin{table}[htbp]
 \centering
-\caption{Comparison of computation times on the 11 problems from Mittelmann's LP benchmarks. All times are single measurements. The time of HiGHS on fome13 was not measured.}
+\caption{The 22 problems of Mittelmann's LP benchmarks that some solver solved within 600\,s (times in seconds). ``---'' means not solved within the time limit. Values of 300\,s or more are single measurements; the others are medians of three runs.}
 \label{tab:mittelmann}
 \small
-\begin{tabular}{lrrr}
+\begin{tabular}{lrrrr}
 \toprule
-Problem & ENOMOTO [s] & HiGHS [s] & Ratio\\
+Problem & ENOMOTO & HiGHS & CLP & SoPlex\\
 \midrule
-cont1 & 375.8 & 242.9 & 1.55\\
-ex10 & 83.8 & 90.4 & 0.93\\
-fome13 & 18.5 & --- & ---\\
-irish-electricity & 124.9 & 156.3 & 0.80\\
-neos & 568.6 & 363.0 & 1.57\\
-nug08-3rd & 261.8 & 283.9 & 0.92\\
-pds-100 & 89.5 & 75.9 & 1.18\\
-s250r10 & 75.2 & 108.3 & 0.69\\
-square41 & 105.5 & 95.2 & 1.11\\
-stormG2\_1000 & 69.7 & 64.0 & 1.09\\
-supportcase10 & 134.7 & 189.2 & 0.71\\
+cont1 & 476.5 & 226.6 & 483.4 & ---\\
+datt256 & --- & --- & 595.3 & ---\\
+ex10 & 105.8 & 107.0 & --- & ---\\
+fome13 & 16.1 & 77.4 & 72.5 & 355.7\\
+irish-electricity & 161.6 & 181.9 & --- & ---\\
+Linf\_520c & --- & --- & 478.0 & ---\\
+neos & --- & 390.0 & 260.3 & 54.7\\
+neos-5052403-cygnet & 16.1 & --- & 554.2 & 521.5\\
+neos-5251015 & --- & --- & 470.0 & ---\\
+ns1688926 & --- & --- & 18.5 & 112.3\\
+nug08-3rd & 342.8 & 274.0 & 485.3 & ---\\
+pds-100 & 108.3 & 89.6 & 167.5 & ---\\
+physiciansched3-3 & 515.3 & --- & --- & ---\\
+qap15 & --- & --- & 475.1 & ---\\
+rail4284 & --- & --- & 42.4 & ---\\
+rmine15 & --- & --- & 464.3 & ---\\
+s250r10 & 82.2 & 104.7 & 363.0 & 502.7\\
+scpm1 & --- & --- & 86.0 & ---\\
+square41 & 112.5 & 70.2 & --- & 211.9\\
+stormG2\_1000 & 79.5 & 70.8 & 192.6 & ---\\
+supportcase10 & 207.5 & 208.0 & 105.2 & 163.2\\
+woodlands09 & --- & --- & 359.2 & ---\\
 \bottomrule
 \end{tabular}
 \end{table}
 
-As shown above, ENOMOTO-Solver runs at a speed comparable to HiGHS on large-scale problems as well. In large, sparse problems, the right-hand sides and solution vectors of FTRAN and BTRAN, as well as the pivot row, become extremely sparse (hyper-sparse), and operations that exploit this sparsity strongly affect the computation time\cite{hall2005}. Analyzing the causes of the differences on the problems where our solver is slower is left for future work; such linear algebra techniques are independent of the method, and all of them can be applied as they are to each phase.
+\subsection{Infeasible and unbounded problems}
+\label{sec:exp-infeasible}
+
+On the 58 infeasible and unbounded problems, ENOMOTO-Solver identified the correct case every time and was faster than HiGHS on 55 of them (geometric mean of the ratios 0.28). As Table~\ref{tab:summary} shows, it is the fastest of the four solvers on the infeasible problems and second to SoPlex on the unbounded ones.
+
+Of the 29 infeasible problems, 17 were declared infeasible during presolve. On the remaining 12, Phase A did not detect $z^1<0$ (on 11 of them no variable was placed on an infinite side in the initial configuration and Phase A was skipped, and on one $z^1=0$), and infeasibility was detected in Phase B.
+
+On 27 of the 29 unbounded problems, ENOMOTO-Solver detected $z^1<0$, that is, the absence of a finite optimal solution, at the end of Phase A, and concluded unboundedness after Phase B and the cleanup (the remaining two are the dual of cplex2, where $z^1=0$, and a problem declared unbounded on a trivial connected component). Table~\ref{tab:phase-times} shows the times on these 27 problems. The detection of $z^1<0$ at the end of Phase A occurred on average at 98\% (at least 88\%) of the time at which unboundedness was concluded, so distinguishing infeasibility from unboundedness took little additional time. This is consistent with the fact that, whereas the existing two-phase dual simplex method needs a separate procedure such as the primal simplex method to distinguish the two cases once the optimal value of phase 1 is negative (Section~\ref{sec:known-two-phase}), our method obtains the distinction as a continuation into Phase B.
+
+\begin{table}[htbp]
+\centering
+\caption{Times of ENOMOTO-Solver on the 27 unbounded problems on which $z^1<0$ was detected at the end of Phase A (seconds from the start of the solve).}
+\label{tab:phase-times}
+\small
+\begin{tabular}{lrr}
+\toprule
+Point & Geo.\ mean & Total\\
+\midrule
+End of Phase A (detection of $z^1<0$) & 0.00786 & 1.719\\
+Conclusion of unboundedness (end of Phase B and cleanup) & 0.00801 & 1.722\\
+Whole solve (including postsolve) & 0.00807 & 1.724\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+As shown above, ENOMOTO-Solver is faster than HiGHS at the scale of Netlib and Kennington, and its shifted geometric mean and total time are the smallest of the four solvers. On the large Mittelmann problems, it solves fewer problems than CLP, and on some problems, such as cont1, neos, square41, ken-18, and pds-20, it remains much slower than the other solvers. For large sparse problems, the right-hand sides and solution vectors of FTRAN and BTRAN, as well as the pivot row, become extremely sparse (hyper-sparse), and operations that exploit this sparsity largely determine the computation time\cite{hall2005}. Analyzing the causes of the differences on the slow problems is left for future work, but these linear algebra techniques are independent of the method and can be applied to each phase as they are.
 
 \section*{Use of generative AI}
 In this work, we used Claude, a generative AI by Anthropic (used via Claude Code), for the following purposes.
@@ -1290,6 +1361,18 @@ W.~J.~Carolan, J.~E.~Hill, J.~L.~Kennington, S.~Niemi, S.~J.~Wichmann,
 H.~D.~Mittelmann,
 ``Benchmarks for optimization software,''
 \url{https://plato.asu.edu/bench.html}.
+
+\bibitem{clp}
+J.~J.~Forrest, D.~de~la~Nuez, R.~Lougee-Heimer,
+\textit{CLP User Guide},
+COIN-OR, 2004.
+\url{https://github.com/coin-or/Clp} (version 1.17.11 was used).
+
+\bibitem{soplex}
+R.~Wunderling,
+\textit{Paralleler und objektorientierter Simplex-Algorithmus},
+Dissertation, Technische Universit\"at Berlin, 1996.
+\url{https://github.com/scipopt/soplex} (version 8.1.0 was used).
 
 \bibitem{andersen1996}
 E.~D.~Andersen, Y.~Ye,
