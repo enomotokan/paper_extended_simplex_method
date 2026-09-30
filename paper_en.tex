@@ -23,15 +23,23 @@
 \newcommand{\R}{\mathbb{R}}
 
 \title{Simultaneous Classification and Solution of Linear Optimization Problems by the Dual Simplex Method: The Slope--Intercept Two-Phase Dual Simplex Method}
-\author{Kan Enomoto\\(Independent researcher)\\\url{https://enomoto-math-labo.com/}}
-\date{\today}
+\author{Kan Enomoto\thanks{Website: \url{https://enomoto-math-labo.com/}}\\
+Independent Researcher, Usa, Oita, Japan\\
+\texttt{enomotokan@gmail.com}\\
+ORCID: \href{https://orcid.org/0009-0001-9485-0393}{0009-0001-9485-0393}}
+\date{}
 
 \begin{document}
 \maketitle
 
 \begin{abstract}
-The all-slack basis becomes dual feasible without any computation, merely by placing each nonbasic variable according to the sign of its cost coefficient, but this requires the bound at which the variable is placed to be finite. The artificial bounding method (the big-$M$ method applied to the dual problem), which replaces infinite bounds by $\mp M$, removes this obstacle; however, as long as $M$ is fixed as a number, there is no guarantee that $M$ is large enough, and the method is also numerically unstable. In this paper we do not fix $M$; instead, we treat the quantities arising during the iterations as affine functions of $M$ and analyze the limit $M\to+\infty$ symbolically. We show that the iterations then split exactly into a phase that solves the \emph{slope problem}, obtained by cutting the recession cone of the original problem with the $\|\cdot\|_\infty$ ball, and a phase that solves the \emph{intercept problem}, obtained by fixing the slope, and that at the end of the former phase it is determined whether the original problem can have a finite optimal value. The slope problem coincides with the auxiliary problem known as Phase~1 of the dual simplex method, and this decomposition connects the artificial bounding method with Phase~1 based on the auxiliary problem. On this basis we derive the \emph{slope--intercept two-phase dual simplex method}, which consists of the two phases followed, when necessary, by a cleanup. This method requires neither the construction of an initial basis nor a numerical value of $M$; using only the dual simplex method, it simultaneously classifies the problem into the three cases (a finite optimal solution exists, the problem is unbounded, or the problem is infeasible) and, when a finite optimal solution exists, computes it. That is, classification and solution are completed within the same two phases, without a case distinction on the outcome of Phase~A and without re-solving by the primal simplex method or with a modified cost. Since each phase is the dual simplex method applied to an ordinary LP, acceleration techniques for the dual simplex method, such as the steepest-edge rule and the Bound Flipping Ratio Test, can be applied as they are, and the division into phases incurs no additional computational cost.
+The all-slack basis becomes dual feasible without any computation if each nonbasic variable is placed at the bound indicated by the sign of its cost, but only when those bounds are finite. The artificial bounding method removes this obstacle by replacing infinite bounds with $\mp M$, but a fixed numerical $M$ may be too small and causes numerical difficulties. We instead treat all quantities arising in the iterations as affine functions of $M$ and analyze the limit $M\to+\infty$ symbolically. The iterations then split exactly into two phases: Phase~A solves the \emph{slope problem}, which coincides with the auxiliary problem known as Phase~1 of the dual simplex method, and Phase~B solves the \emph{intercept problem} obtained by fixing the slope. This decomposition connects the artificial bounding method with auxiliary-problem Phase~1. On this basis we derive the \emph{slope--intercept two-phase dual simplex method}. Using only dual simplex iterations and a light cleanup, it simultaneously classifies a linear optimization problem as having a finite optimum, being unbounded, or being infeasible, and computes an optimal basic solution when one exists, without a case distinction on the outcome of Phase~A and without re-solving. Standard techniques such as the dual steepest-edge rule and the bound flipping ratio test apply unchanged. Experiments on 207 instances show that our implementation is competitive with HiGHS, CLP and SoPlex and distinguishes infeasibility from unboundedness at little extra cost.
 \end{abstract}
+
+\noindent\textbf{Keywords:} linear optimization $\cdot$ dual simplex method $\cdot$ infeasibility detection $\cdot$ unboundedness $\cdot$ big-$M$ method $\cdot$ artificial bounds
+
+\medskip
+\noindent\textbf{Mathematics Subject Classification (2020):} 90C05 $\cdot$ 65K05
 
 \section{Introduction}
 \label{sec:intro}
@@ -58,8 +66,6 @@ As methods that can distinguish the three cases without requiring Phase~1, the c
 In this paper we analyze the dual simplex method applied to the bounded problem symbolically in the limit $M\to+\infty$, without fixing $M$ as a number. We show that the iterations then split into two phases that solve the slope problem and the intercept problem in turn, and on this basis we derive a two-phase dual simplex method (the slope--intercept two-phase dual simplex method) in which the steepest-edge rule, the Devex rule and the Bound Flipping Ratio Test (BFRT) can be used as they are.
 
 This paper is organized as follows. Section~\ref{sec:contribution} distinguishes known results from the contributions of this paper; Section~\ref{sec:prelim} reviews the notation of the dual simplex method with bound constraints, and Section~\ref{sec:difficulty} reviews known methods for constructing an initial basis. In Section~\ref{sec:method} we bound the unbounded variables by $M$ and give a trivial dual feasible initial basis. In Section~\ref{sec:symbolic} we analyze the behavior as $M\to+\infty$ symbolically and establish the classification of the original problem into the three cases, the cleanup, the non-return to infinite bounds, and anti-cycling. In Section~\ref{sec:two-phase} we show that the iterations split into two phases that solve the slope problem and the intercept problem and compare this with existing two-phase dual simplex methods, and in Section~\ref{sec:dual-view} we interpret this from the side of the dual problem. Section~\ref{sec:summary} summarizes the slope--intercept two-phase dual simplex method, and Section~\ref{sec:experiments} reports the results of numerical experiments.
-
-\tableofcontents
 
 \section{Known Results and Contributions of This Paper}
 \label{sec:contribution}
@@ -1168,14 +1174,23 @@ Whole solve (including postsolve) & 0.00807 & 1.724\\
 
 As shown above, ENOMOTO-Solver is faster than HiGHS at the scale of Netlib and Kennington, and its shifted geometric mean and total time are the smallest of the four solvers. On the large Mittelmann problems, it solves fewer problems than CLP, and on some problems, such as cont1, neos, square41, ken-18, and pds-20, it remains much slower than the other solvers. For large sparse problems, the right-hand sides and solution vectors of FTRAN and BTRAN, as well as the pivot row, become extremely sparse (hyper-sparse), and operations that exploit this sparsity largely determine the computation time\cite{hall2005}. Analyzing the causes of the differences on the slow problems is left for future work, but these linear algebra techniques are independent of the method and can be applied to each phase as they are.
 
-\section*{Use of generative AI}
-In this work, we used Claude, a generative AI by Anthropic (used via Claude Code), for the following purposes.
+\section*{Statements and declarations}
+
+\paragraph{Funding.} No funding was received for conducting this study.
+
+\paragraph{Competing interests.} The author has no competing interests to declare that are relevant to the content of this article.
+
+\paragraph{Data availability.} The Netlib, Kennington and Mittelmann test problems are publicly available from their original sources \cite{gay1985,carolan1990,mittelmann}. The unbounded instances constructed as duals of the infeasible problems, the measurement scripts and the raw results of all experiments are available at \url{https://github.com/enomotokan/enomoto_solver}.
+
+\paragraph{Code availability.} The source code of ENOMOTO-Solver is available at \url{https://github.com/enomotokan/enomoto_solver} under the MIT License.
+
+\paragraph{Use of generative AI.} In this work, we used Claude, a generative AI by Anthropic (used via Claude Code), for the following purposes.
 \begin{itemize}
 \item \textbf{Solver implementation}: most of the implementation of ENOMOTO-Solver was carried out by the AI under the author's design and direction. Many of the implementation techniques listed in Section~\ref{sec:exp-features} were proposed by the AI, and the author decided whether to adopt them based on the results of comparative experiments.
 \item \textbf{Numerical experiments}: the AI was used to write the measurement scripts, run the measurements, and aggregate the results.
 \item \textbf{Manuscript preparation}: the AI was used for drafting the text of the manuscript, organizing the written proofs, surveying the literature, and revising.
 \end{itemize}
-The ideas and theory of the method in this paper (the analysis with a symbolic $M$, the decomposition into the slope problem and the intercept problem, the distinction of the three cases, and the correspondence between the big-$M$ method and the two-phase method for the dual problem) are due to the author. All text, proofs, code, and numerical results generated by the AI have been checked by the author, and the author takes responsibility for the content of this paper. The source code and the experimental scripts and data are available at \url{https://github.com/enomotokan/enomoto_solver}.
+The ideas and theory of the method in this paper (the analysis with a symbolic $M$, the decomposition into the slope problem and the intercept problem, the distinction of the three cases, and the correspondence between the big-$M$ method and the two-phase method for the dual problem) are due to the author. All text, proofs, code, and numerical results generated by the AI have been checked by the author, and the author takes responsibility for the content of this paper.
 
 \begin{thebibliography}{99}
 
