@@ -1,6 +1,7 @@
-\documentclass[final,5p,times,twocolumn]{elsarticle}
+\documentclass[11pt,a4paper]{article}
 
 \usepackage{amsmath,amssymb,amsthm}
+\usepackage[a4paper,margin=25mm]{geometry}
 \usepackage{enumitem}
 \usepackage{hyperref}
 
@@ -18,29 +19,23 @@
 \newcommand{\R}{\mathbb{R}}
 \newcommand{\Pb}{\mathrm{P}}
 
-\journal{Operations Research Letters}
+\title{Artificial bounding and the subproblem approach to dual Phase~1 coincide iteration by iteration}
+\author{Kan Enomoto\thanks{Website: \url{https://enomoto-math-labo.com/}}\\
+Independent Researcher, Usa, Oita, Japan\\
+\texttt{enomotokan@gmail.com}\\
+ORCID: \href{https://orcid.org/0009-0001-9485-0393}{0009-0001-9485-0393}}
+\date{}
 
 \begin{document}
-
-\begin{frontmatter}
-
-\title{Artificial bounding and the subproblem approach to dual Phase~1 coincide iteration by iteration}
-
-\author{Kan Enomoto}
-\ead{enomotokan@gmail.com}
-\ead[url]{https://enomoto-math-labo.com/}
-\address{Independent Researcher, Usa, Oita, Japan}
-
+\maketitle
 \begin{abstract}
-The artificial bounding method and the subproblem approach are two established ways of starting the dual simplex method when some variables have infinite bounds. The former introduces a slack variable fixed at zero in every equality constraint, takes these slacks as the basis, and exploits the fact that this basis becomes dual feasible at no cost once every nonbasic variable with finite bounds is placed at the bound indicated by the sign of its reduced cost: it replaces infinite bounds by $\mp M$ and applies the dual simplex method, and is known to suffer from the choice of $M$; the latter minimizes the sum of dual infeasibilities over an auxiliary problem. We show that, for every sufficiently large $M$, the artificial bounding method generates exactly the same sequence of bases as an $M$-free two-phase procedure: the dual simplex method on the auxiliary problem of the subproblem approach, followed by the dual simplex method on an \emph{intercept problem} determined by the optimal solution of the auxiliary problem. The two phases are the coefficient of $M$ and the constant term of the basic solution. The result holds for the textbook and the bound flipping ratio tests and for leaving-row rules such as dual steepest edge. Consequently, the two Phase~1 methods differ only in the placement of nonbasic variables with zero reduced cost, no value of $M$ has to be chosen, and the intercept phase distinguishes infeasibility from unboundedness.
+The artificial bounding method and the subproblem approach are two established ways of starting the dual simplex method when some variables have infinite bounds. The former starts from the all-slack basis, which becomes dual feasible once every nonbasic variable is placed at the bound indicated by the sign of its reduced cost. To make all these bounds finite, it replaces infinite bounds by $\mp M$, and the choice of $M$ is its known weakness. The latter minimizes the sum of dual infeasibilities over an auxiliary problem. We show that, for every sufficiently large $M$, the artificial bounding method visits exactly the bases of an $M$-free two-phase procedure: the dual simplex method on the auxiliary problem, followed by the dual simplex method on an \emph{intercept problem} determined by its optimal solution. This holds for the textbook and the bound flipping ratio tests. Consequently, no value of $M$ has to be chosen, the two methods differ only in the placement of zero-reduced-cost variables when the dual problem is feasible, and the intercept phase distinguishes infeasibility from unboundedness.
 \end{abstract}
 
-\begin{keyword}
-linear optimization \sep dual simplex method \sep dual phase 1 \sep artificial bounds \sep big-$M$ method \sep infeasibility and unboundedness
-\end{keyword}
+\noindent\textbf{Keywords:} linear optimization $\cdot$ dual simplex method $\cdot$ dual phase 1 $\cdot$ artificial bounds $\cdot$ big-$M$ method $\cdot$ infeasibility and unboundedness
 
-\end{frontmatter}
-
+\medskip
+\noindent\textbf{Mathematics Subject Classification (2020):} 90C05 $\cdot$ 65K05
 \section{Introduction}
 \label{sec:intro}
 
@@ -49,16 +44,24 @@ The dual simplex method needs a dual feasible starting basis. For a basis $B$ wi
 \item The \emph{artificial bounding method} replaces every infinite bound by $-M$ or $+M$ for a large constant $M$ and runs the dual simplex method on the resulting bounded problem. It is the big-$M$ method applied to the dual problem~\cite{wolfe1965,koberstein2005}. Its weakness is $M$ itself: too small a value cuts off unbounded directions and forces restarts with a larger $M$, and too large a value causes numerical difficulties. For these reasons Koberstein excluded it from his implementation~\cite{koberstein2005}.
 \item The \emph{subproblem approach}~\cite{fourer1994,koberstein2005,koberstein2007} solves an auxiliary problem, obtained by setting the right-hand side and the finite bounds to $0$ and the infinite bounds to $\mp1$ (so that variables with two finite bounds stay in it with bounds $[0,0]$; Koberstein~\cite{koberstein2005} considers the problem obtained from it by removing these variables), whose optimal value is minus the minimal sum of dual infeasibilities. If this value is $0$, the final basis is turned into a dual feasible basis of the original problem and the dual simplex method continues; otherwise the problem is reported dual infeasible, which does not distinguish infeasibility from unboundedness.
 \end{itemize}
-These two methods are presented in the literature as different techniques. On the primal side it is classical that the big-$M$ method and the two-phase method agree in the limit $M\to\infty$~\cite{chvatal1983,bertsimas1997}, and treating $M$ as a non-Archimedean infinity turns the big-$M$ method into lexicographic optimization~\cite{sherali1983,cococcioni2021}. These statements concern objective values or optimal solutions; they do not say which bases the simplex method visits.
+These two methods are presented in the literature on the dual simplex method as different techniques. On the primal side, the corresponding fact is classical: in the big-$M$ method with $M$ treated symbolically, reduced costs are compared first by their coefficients of $M$ and then by their constant terms, and the iterations correspond to those of the two-phase method~\cite[Sect.~4.3]{bazaraa2010}; treating $M$ as a non-Archimedean infinity turns the method into lexicographic optimization~\cite{sherali1983,cococcioni2021}. Since the dual simplex method is the primal simplex method on the dual~\cite{lemke1954}, the artificial bounding method is the big-$M$ method on the dual. In the form used by dual simplex codes, however, $M$ enters the bounds rather than the costs, the basic solution rather than the reduced costs depends on $M$, and implementation techniques such as the bound flipping ratio test act on the bounds.
 
-The main result of this note (Theorem~\ref{thm:main}) is an iteration-level statement on the dual side. For every sufficiently large $M$, the artificial bounding method visits exactly the bases visited by the following procedure, which involves no $M$:
+The main result of this note (Theorem~\ref{thm:main}) is the corresponding iteration-level statement in this form. For every sufficiently large $M$, the artificial bounding method visits exactly the bases visited by the following procedure, which involves no $M$:
 \begin{description}[leftmargin=1em]
 \item[Phase A:] the dual simplex method on the auxiliary problem of the subproblem approach (the \emph{slope problem});
 \item[Phase B:] the dual simplex method, started from the final basis of Phase~A, on an \emph{intercept problem} whose bounds are determined by the optimal solution of Phase~A.
 \end{description}
 The proof rests on the fact that, for a fixed basis, the basic solution of the bounded problem is $x^0+Mx^1$, where $x^1$ and $x^0$ are the basic solutions of the slope and intercept problems. The leaving-row choices of the artificial bounding method first depend only on $x^1$ and, once $x^1$ is optimal for the slope problem, only on $x^0$. The same holds for the decisions of the bound flipping ratio test, whose bound widths are also affine in $M$, so the result covers the standard implementation techniques of the dual simplex method.
 
-Three consequences follow (Section~\ref{sec:consequences}). First, the artificial bounding method and the subproblem approach coincide up to the placement of nonbasic variables with zero reduced cost at the end of Phase~1 (Corollary~\ref{cor:subproblem}). Second, the behavior of the artificial bounding method for all sufficiently large $M$ is reproduced without choosing $M$, which removes the weakness noted by Koberstein. Third, the artificial bounding method does not stop when the problem is dual infeasible, and Phase~B then decides between infeasibility and unboundedness using dual simplex iterations only (Corollary~\ref{cor:classification}); when a finite optimum exists, nonbasic variables left at artificial bounds are removed by a lexicographic primal push in at most as many pivots as there are such variables (Proposition~\ref{prop:cleanup}). On the dual side, the theorem is an iteration-level version of the equivalence of the big-$M$ and two-phase methods (Remark~\ref{rem:dual}). We are not aware of a statement of this equivalence in the literature.
+For the textbook ratio test and Dantzig's rule, Theorem~\ref{thm:main} can be read as the dual counterpart of the primal fact above. The contributions of this note are the following.
+\begin{enumerate}[label=(\roman*)]
+\item It identifies two dual Phase~1 methods that have been treated and compared as different: when the dual of~\eqref{eq:P} is feasible, the artificial bounding method and the subproblem approach coincide up to the placement of nonbasic variables with zero reduced cost at the end of Phase~1 (Corollary~\ref{cor:subproblem}). Hence the behavior of the artificial bounding method for all sufficiently large $M$ is reproduced without choosing $M$, and the weakness noted by Koberstein is not intrinsic.
+\item Unlike the primal big-$M$ and two-phase methods, which stop when Phase~1 leaves artificial variables positive~\cite[Sect.~4.3]{bazaraa2010}, the artificial bounding method continues with Phase~B when the problem is dual infeasible, and Phase~B decides between infeasibility and unboundedness using dual simplex iterations only (Corollary~\ref{cor:classification} and Remark~\ref{rem:dual}).
+\item The intercept problem on which Phase~B operates is given explicitly in the primal space.
+\item The coincidence extends to the bound flipping ratio test and to leaving-row rules with data-independent weights such as dual steepest edge.
+\item When a finite optimum exists, nonbasic variables left at artificial bounds are removed by a lexicographic primal push in at most as many pivots as there are such variables (Proposition~\ref{prop:cleanup}).
+\end{enumerate}
+We are not aware of a statement of the coincidence of these two dual Phase~1 methods in the literature on the dual simplex method.
 
 \section{Setting}
 \label{sec:setting}
@@ -124,7 +127,7 @@ If $E=\emptyset$, stop: $\Pb(D)$ is infeasible. Otherwise choose $q\in\arg\min_{
 We make the following assumptions on the rules.
 \begin{itemize}
 \item The weights $\omega_i>0$ depend only on $A$ and on the history of states and pivots, not on $D$. This covers Dantzig's rule ($\omega_i=1$), the dual steepest-edge rule ($\omega_i=\|e_i^\top A_B^{-1}\|_2$)~\cite{forrestgoldfarb1992} and dual Devex weights~\cite{harris1973}.
-\item $\tau_{\mathrm{row}}$ and $\tau_{\mathrm{col}}$ are deterministic and depend on the same information only (for example, smallest index, or the lexicographic rule on perturbed costs for $\tau_{\mathrm{col}}$~\cite{dantzig1955}).
+\item $\tau_{\mathrm{row}}$ and $\tau_{\mathrm{col}}$ are deterministic and depend on the same information only (for example, smallest index).
 \end{itemize}
 Fixed variables are not excluded from $E$; this keeps the ratio test literally the same for all problems below. The iteration preserves dual feasibility and admissibility, and no new status $Z$ is created. A variable in status $Z$ is never passed in~(c$'$). The same choice of~(c) or~(c$'$) is used in all problems below.
 
@@ -155,8 +158,8 @@ Then Phase~A never stops with infeasibility, $\xi$ is an optimal solution of the
 
 \emph{Invariant of Phase~B.} Every state visited in Phase~B is compatible with $\xi$. By~\eqref{eq:intercept}, the lower bound of $j$ in $\Pb(D^\xi)$ is finite if and only if $\xi_j=l^1_j$, and likewise for the upper bound. The state $(B^\ast,\eta^\ast)$ is compatible with $\xi$. In a pivot, the entering variable leaves the nonbasic set, and the leaving variable $\beta(r)$ is placed with status $L$ or $U$ at the finite bound it violated, so it satisfies the condition by this equivalence. A variable flipped in~(c$'$) has two finite bounds in $\Pb(D^\xi)$, so $\xi_j=l^1_j=u^1_j$ and it satisfies the condition after the flip. Other statuses do not change.
 
-\emph{Choice of $M^\dagger$.} Let $T_0,\dots,T_K$ be the states visited by Phases~A and~B. At each $T_k$ and for each row $i$, Lemma~\ref{lem:affine} shows that the violations in $\Pb(D_M)$ are affine in $M$:
-$\delta_i^\pm(M)=\delta_i^{\pm,0}+M\delta_i^{\pm,1}$, where $\delta^{\pm,1}_i$ are the violations in $\Pb(D^1)$ and $\delta^{\pm,0}_i$ those for $(b,l^0,u^0)$ (an infinite side of~\eqref{eq:P} gives $\delta^{-,1}_i=-1-x^1_{\beta(i)}$, a finite one $\delta^{-,1}_i=-x^1_{\beta(i)}$, and similarly for $+$). For two affine functions $f,h$ of $M$, write $f\succ h$ if $(f^1,f^0)$ is lexicographically larger than $(h^1,h^0)$; then $f(M)>h(M)$ for all large $M$. Choose $M^\dagger$ larger than all finite $|l_j|,|u_j|$, so that $D_M$ has lower bounds not exceeding upper bounds, and large enough that, at every $T_k$, all numerical comparisons among the finitely many affine functions $\delta_i^\pm(M)$, $\delta_i^\pm(M)/\omega_i$, the remaining violations in~(c$'$) and $0$ agree with $\succ$. This is possible since $K$ is finite and the weights $\omega_i$ at $T_k$ are fixed numbers determined by the history (which will coincide, by induction).
+\emph{Choice of $M^\dagger$.} Let $T_0,\dots,T_\ell$ be the states visited by Phases~A and~B. At each $T_k$ and for each row $i$, Lemma~\ref{lem:affine} shows that the violations in $\Pb(D_M)$ are affine in $M$:
+$\delta_i^\pm(M)=\delta_i^{\pm,0}+M\delta_i^{\pm,1}$, where $\delta^{\pm,1}_i$ are the violations in $\Pb(D^1)$ and $\delta^{\pm,0}_i$ those for $(b,l^0,u^0)$ (an infinite side of~\eqref{eq:P} gives $\delta^{-,1}_i=-1-x^1_{\beta(i)}$, a finite one $\delta^{-,1}_i=-x^1_{\beta(i)}$, and similarly for $+$). For two affine functions $f,h$ of $M$, write $f\succ h$ if $(f^1,f^0)$ is lexicographically larger than $(h^1,h^0)$; then $f(M)>h(M)$ for all large $M$. Choose $M^\dagger$ larger than all finite $|l_j|,|u_j|$, so that $D_M$ has lower bounds not exceeding upper bounds, and large enough that, at every $T_k$, all numerical comparisons among the finitely many affine functions $\delta_i^\pm(M)$, $\delta_i^\pm(M)/\omega_i$, the remaining violations in~(c$'$) and $0$ agree with $\succ$. This is possible since $\ell$ is finite and the weights $\omega_i$ at $T_k$ are fixed numbers determined by the history (which will coincide, by induction).
 
 \emph{Induction.} Let $M\ge M^\dagger$ and suppose the artificial bounding method is at $T_k$ with the same history as the two-phase procedure. The ratio test~(c) and the pivot~(d) use only $c$, $A$, $(B,\eta)$ and $\rho$, which are the same in both methods. It remains to compare (a), (b) and, with~(c$'$), the passing test.
 
@@ -164,10 +167,10 @@ $\delta_i^\pm(M)=\delta_i^{\pm,0}+M\delta_i^{\pm,1}$, where $\delta^{\pm,1}_i$ a
 
 \emph{Case $T_k$ in Phase~B.} By the invariant and the second property of compatible states, $x^1=\xi$, which is feasible for the slope problem, so $\delta^{\pm,1}_i\le0$ for all $i$. If $\delta^{-,1}_i<0$, then $\xi_{\beta(i)}>l^1_{\beta(i)}$, the lower bound of $\beta(i)$ in $\Pb(D^\xi)$ is $-\infty$, and the side is violated in neither problem. If $\delta^{-,1}_i=0$, then $\xi_{\beta(i)}=l^1_{\beta(i)}$, $\lambda^\xi_{\beta(i)}=l^0_{\beta(i)}$, and by the third property the constant term $\delta^{-,0}_i$ equals the violation in $\Pb(D^\xi)$; the same holds for the upper side. Hence the violated rows of $\Pb(D_M)$ are those of $\Pb(D^\xi)$, with $\delta_i(M)$ equal to the violation in $\Pb(D^\xi)$, and~(a) and~(b) coincide, including the stopping test in~(a). In~(c$'$), the remaining violation in $\Pb(D_M)$ starts with slope $\delta^1_r=0$. Let $j$ be a candidate with $\eta(j)=L$ (the case $U$ is symmetric), so $\xi_j=l^1_j$. If $w^1_j>0$, passing $j$ would make the slope negative, so $j$ is not passed in $\Pb(D_M)$; and $\xi_j=l^1_j<u^1_j$ gives $\mu^\xi_j=+\infty$, so $j$ cannot be passed in $\Pb(D^\xi)$ either. If $w^1_j=0$, then $j$ has two finite bounds in~\eqref{eq:P}, its width is $u_j-l_j$ in both problems, the slope stays $0$, and both tests compare the same constant. Variables in status $Z$ are passed in neither.
 
-By induction both methods visit $T_0,\dots,T_K$ and stop identically at $T_K$, proving (i) and (ii); (iii) follows from Lemma~\ref{lem:affine} and the properties of compatible states.
+By induction both methods visit $T_0,\dots,T_\ell$ and stop identically at $T_\ell$, proving (i) and (ii); (iii) follows from Lemma~\ref{lem:affine} and the properties of compatible states.
 \end{proof}
 
-Termination of both phases holds, for example, under the lexicographic rule for $\tau_{\mathrm{col}}$~\cite{dantzig1955}, which is compatible with any choice of the leaving row. The threshold $M^\dagger$ depends on the instance and is not known in advance; the point of the theorem is that Phases~A and~B compute the path of the artificial bounding method for all $M\ge M^\dagger$ without choosing $M$. The only places where data other than $D^1$ enter Phase~A are the intercept tie-breaks; it reproduces the behavior of the artificial bounding method exactly, but any other tie-breaking rule in Phase~A leaves the statements of Section~\ref{sec:consequences} valid. Implementations usually exclude fixed variables from the ratio test and reset their statuses by the signs of their reduced costs after each pivot. If the variables fixed in~\eqref{eq:P} are treated in this way in all problems, the theorem remains valid with the same proof, since these variables are fixed in every $\Pb(D)$ and the reset changes no basic solution.
+Termination of both phases is an assumption of the theorem. With the textbook ratio test~(c), it is guaranteed, for example, by the lexicographic rule based on perturbing the costs, for any choice of the leaving row including the dual steepest-edge rule. Termination in general with the bound flipping ratio test~(c$'$), which is standard in implementations, is not obvious, and we do not discuss it here. The threshold $M^\dagger$ depends on the instance and is not known in advance; the point of the theorem is that Phases~A and~B compute the path of the artificial bounding method for all $M\ge M^\dagger$ without choosing $M$. The only places where data other than $D^1$ enter Phase~A are the intercept tie-breaks; it reproduces the behavior of the artificial bounding method exactly, but any other tie-breaking rule in Phase~A leaves the statements of Section~\ref{sec:consequences} valid. Implementations usually exclude fixed variables from the ratio test and reset their statuses by the signs of their reduced costs after each pivot. If the variables fixed in~\eqref{eq:P} are treated in this way in all problems, the theorem remains valid with the same proof, since these variables are fixed in every $\Pb(D)$ and the reset changes no basic solution.
 
 \section{Consequences}
 \label{sec:consequences}
@@ -185,7 +188,7 @@ Under the assumptions of Theorem~\ref{thm:main} (with any tie-breaking rule in P
 Since $\xi$ is feasible for the slope problem, $A\xi=0$ and $l^1\le\xi\le u^1$. By~\eqref{eq:intercept}: if $y$ is feasible for $\Pb(D^\xi)$, then $y+M\xi\in F$ for all large $M$; conversely, if $x\in F$, then $x-M\xi$ is feasible for $\Pb(D^\xi)$ for all large $M$. In both cases the objective values differ by $Mz^1$. Thus $\Pb(D^\xi)$ is feasible if and only if $F\neq\emptyset$, which gives~(i). If $F\neq\emptyset$, then $C$ is the recession cone of $F$, and since $z^1=\min\{c^\top d: d\in C\cap[-1,1]^n\}$, we have $z^1<0$ if and only if $c^\top d<0$ for some $d$ in the recession cone, i.e., if and only if~\eqref{eq:P} is unbounded~\cite{bertsimas1997}. This gives~(ii) and the first part of~(iii). If $z^1=0$, then every $x\in F$ satisfies $c^\top x=c^\top(x-M\xi)\ge c^\top x^0$, and $x^0+M\xi\in F$ attains this value for large $M$.
 \end{proof}
 
-By Theorem~\ref{thm:main}, the same classification holds for the artificial bounding method with any $M\ge M^\dagger$: at an optimal state of $\Pb(D_M)$, the coefficient of $M$ in the objective value, $c^\top x^1$, is negative exactly when~\eqref{eq:P} is unbounded. Hence the ambiguity of the artificial bounding method between ``$M$ too small'' and ``unbounded'' disappears once $M$ is treated through Phases~A and~B. If $z^1=0$ and $\xi\neq0$, the optimal state of Phase~B is optimal for~\eqref{eq:P} but some nonbasic variables still sit at artificial bounds; they have zero reduced cost (Corollary~\ref{cor:subproblem}(iii) below). An optimal basis of~\eqref{eq:P} is then obtained either by the repositioning of Corollary~\ref{cor:subproblem}(iii) before Phase~B, or by removing the coefficient of $M$ after Phase~B with at most $K$ pivots that compare affine functions of $M$ lexicographically (Proposition~\ref{prop:cleanup}).
+By Theorem~\ref{thm:main}, the same classification holds for the artificial bounding method with any $M\ge M^\dagger$: at an optimal state of $\Pb(D_M)$, the coefficient of $M$ in the objective value, $c^\top x^1$, is negative exactly when~\eqref{eq:P} is unbounded. Hence the ambiguity of the artificial bounding method between ``$M$ too small'' and ``unbounded'' disappears once $M$ is treated through Phases~A and~B. If $z^1=0$ and $\xi\neq0$, the optimal state of Phase~B is optimal for~\eqref{eq:P} but some nonbasic variables still sit at artificial bounds; they have zero reduced cost (proof of Proposition~\ref{prop:cleanup}). An optimal basis of~\eqref{eq:P} is then obtained either by the repositioning of Corollary~\ref{cor:subproblem}(iii) before Phase~B, or by removing the coefficient of $M$ after Phase~B with at most $K$ pivots that compare affine functions of $M$ lexicographically (Proposition~\ref{prop:cleanup}).
 
 \begin{remark}[Deciding feasibility when $z^1<0$]
 \label{rem:feasibility}
@@ -223,7 +226,7 @@ For each row $i$ with $a_i>0$ and $u_{\beta(i)}<+\infty$ let $t_i:=(u_{\beta(i)}
 The procedure stops after exactly $K$ steps at an optimal basis of~\eqref{eq:P}, i.e., a dual feasible state admissible for $(b,l,u)$ whose basic solution is feasible for~\eqref{eq:P}, and its objective value is $c^\top x^0$ of the final state of Phase~B.
 \end{proposition}
 \begin{proof}
-At the start, the state is dual feasible, $\bar c_j=0$ whenever $x^1_j=\xi_j\neq0$ (Corollary~\ref{cor:subproblem}(iii)), and $x(M)\in F$ for all large $M$ (proof of Corollary~\ref{cor:classification}). We show that each step preserves these properties and the objective value, and decreases the number of nonbasic $j$ with $x^1_j\neq0$ by one.
+At the start, the state is dual feasible and compatible with $\xi$, so its basic solution of the slope problem is $\xi$ (proof of Theorem~\ref{thm:main}). Hence $\xi_B=-A_B^{-1}A_N\xi_N$, and the computation in the proof of Corollary~\ref{cor:subproblem}(iii) shows that $z^1=\sum_{j\in N}\bar c_j\xi_j$ is a sum of nonpositive terms; since $z^1=0$, we get $\bar c_j=0$ whenever $x^1_j=\xi_j\neq0$. Moreover, $x(M)\in F$ for all large $M$ (proof of Corollary~\ref{cor:classification}). We show that each step preserves these properties and the objective value, and decreases the number of nonbasic $j$ with $x^1_j\neq0$ by one.
 The objective changes by $-x^1_jt\,\bar c_j=0$. In~(A) the basis is unchanged and only the status of $j$ changes, which is admissible since $\bar c_j=0$. In~(B) the pivot column has $\bar c_j=0$, so the reduced costs of the other nonbasic variables do not change and that of $\beta(r)$ becomes $0$; dual feasibility is kept, and in particular $\bar c_k=0$ still holds for the remaining $k$ with $x^1_k\neq0$. Since $x(M)$ satisfies the finite bounds of~\eqref{eq:P} for large $M$, every $t_i\succeq0$, and $T$ has slope $1$; hence $0\preceq t^\ast\preceq T$, the moving variable stays between $x_j(M)$ and $g_j$, and no basic variable passes a finite bound. The bounds that are infinite in~\eqref{eq:P} impose nothing. Thus the new basic solution, again affine in $M$, lies in $F$ for large $M$. Finally, $j$ becomes basic or is placed at $g_j$ with slope $0$, $\beta(r)$ is placed at a finite bound with slope $0$, and no other status changes.
 After $K$ steps $x^1_N=0$, hence $x^1=-A_B^{-1}A_Nx^1_N=0$, and the basic solution is a constant vector in $F$. All nonbasic variables are at finite bounds of~\eqref{eq:P} or in status $Z$, so the state is an optimal basis of~\eqref{eq:P}.
 \end{proof}
@@ -231,7 +234,7 @@ After $K$ steps $x^1_N=0$, hence $x^1=-A_B^{-1}A_Nx^1_N=0$, and the basic soluti
 This is the primal push of crossover~\cite{megiddo1991,bixby1994}, carried out on affine functions of $M$. It is the only place where both components of $\succ$ are needed: $T$ and some $t_i$ may have the same slope, or two $t_i$ may. In contrast to substituting a numerical $M$ into $x^0+M\xi$, which gives an optimal solution that is in general not basic and may require a very large $M$, the procedure returns a basic solution and never fixes $M$.
 
 \begin{example}
-Consider $\min x_1$ subject to $x_2+s=5$, $x_1$ free, $0\le x_2\le1$, $s\in[0,0]$, started from the slack basis with $x_1$ at status $L$ (since $c_1=1>0$) and $x_2$ at $L$. In the slope problem, $x_1=-1$ and $s=0$, so Phase~A stops at once with $\xi=(-1,0,0)$ and $z^1=-1$; the subproblem approach reports dual infeasibility. The intercept problem has $x_1\ge0$, $0\le x_2\le1$, $s\in[0,0]$, and Phase~B detects $E=\emptyset$ after one pivot, so the problem is infeasible (not unbounded). The artificial bounding method with $M\ge M^\dagger$ performs the same pivot. Note that its first violation, $\delta(M)=5$, has slope $0$; a rule that compares slopes only would stop with $z^1<0$ and misreport unboundedness.
+Consider $\min x_1$ subject to $x_2+s=5$, $x_1$ free, $0\le x_2\le1$, $s\in[0,0]$, started from the slack basis with $x_1$ at status $L$ (since $c_1=1>0$) and $x_2$ at $L$. In the slope problem, $x_1=-1$ and $s=0$, so Phase~A stops at once with $\xi=(-1,0,0)$ and $z^1=-1$; the subproblem approach reports dual infeasibility. The intercept problem has $x_1\ge0$, $0\le x_2\le1$, $s\in[0,0]$, and Phase~B detects $E=\emptyset$ after one pivot, so the problem is infeasible (not unbounded). The artificial bounding method with $M\ge M^\dagger$ performs the same pivot. Note that its first violation, $\delta(M)=5$, has slope $0$. A treatment of $M\to\infty$ that looks only at the coefficient of $M$ and ignores the constant term would regard this row as not violated, stop with $z^1<0$, and misreport unboundedness.
 \end{example}
 
 \begin{remark}[Dual interpretation]
@@ -242,25 +245,32 @@ Writing $\kappa,\nu\ge0$ for the multipliers of the lower and upper bounds, the 
 &-M\textstyle\bigl(\sum_{l_j=-\infty}\kappa_j+\sum_{u_j=+\infty}\nu_j\bigr)\\
 \text{s.t.}\ \ & A^\top y+\kappa-\nu=c,\ \ \kappa,\nu\ge0.
 \end{align*}
-The dual of~\eqref{eq:P} is obtained by fixing the multipliers of the infinite bounds at $0$ ($\kappa_j=0$ if $l_j=-\infty$, $\nu_j=0$ if $u_j=+\infty$). Hence the dual of $\Pb(D_M)$ allows these multipliers as artificial variables with penalty $M$, i.e., it is the big-$M$ method for the dual~\cite{koberstein2005}. Since the right-hand side and the finite bounds of the slope problem are $0$, its dual has only the objective $-\bigl(\sum_{l_j=-\infty}\kappa_j+\sum_{u_j=+\infty}\nu_j\bigr)$, i.e., it minimizes the sum of the artificial variables (dual Phase~1). Since the dual simplex method on the primal is the primal simplex method on the dual~\cite{lemke1954}, Theorem~\ref{thm:main} states that the big-$M$ method on the dual follows, pivot by pivot, the two-phase method on the dual. This is an iteration-level counterpart of the classical limit statement~\cite{chvatal1983,bertsimas1997}, obtained without non-Archimedean arithmetic~\cite{cococcioni2021}: in the main iterations the two components of the lexicographic comparison are never active at the same time. Proposition~\ref{prop:cleanup} corresponds on the dual side to driving the artificial variables that remain basic at value $0$ out of the basis.
+The dual of~\eqref{eq:P} is obtained by fixing the multipliers of the infinite bounds at $0$ ($\kappa_j=0$ if $l_j=-\infty$, $\nu_j=0$ if $u_j=+\infty$). Hence the dual of $\Pb(D_M)$ allows these multipliers as artificial variables with penalty $M$, i.e., it is the big-$M$ method for the dual~\cite{koberstein2005}. Since the right-hand side and the finite bounds of the slope problem are $0$, its dual has only the objective $-\bigl(\sum_{l_j=-\infty}\kappa_j+\sum_{u_j=+\infty}\nu_j\bigr)$, i.e., it minimizes the sum of the artificial variables (dual Phase~1). Since the dual simplex method on the primal is the primal simplex method on the dual~\cite{lemke1954}, Theorem~\ref{thm:main} states that the big-$M$ method on the dual first performs, pivot by pivot, dual Phase~1 and then continues from its optimal basis. This is the dual counterpart of the classical correspondence for the big-$M$ method with a symbolic $M$~\cite{bazaraa2010}, obtained without non-Archimedean arithmetic~\cite{cococcioni2021}: in the main iterations the two components of the lexicographic comparison are never active at the same time. Proposition~\ref{prop:cleanup} corresponds on the dual side to driving the artificial variables that remain basic at value $0$ out of the basis.
+
+One point, however, is not apparent from this dual interpretation. The classical two-phase method stops when Phase~1 leaves artificial variables positive, here when $z^1<0$ reveals dual infeasibility, and performs no Phase~2. The artificial bounding method instead proceeds to Phase~B, and the way Phase~B stops decides primal feasibility correctly (Corollary~\ref{cor:classification}(i)(ii)). On the dual side, Phase~B maximizes the original dual objective while keeping the sum of the artificial variables minimal; that this decides primal feasibility does not follow from the framework of the two-phase method on the dual.
 \end{remark}
 
 
 \section{Conclusion}
 \label{sec:conclusion}
 
-The artificial bounding method, run with any sufficiently large $M$, is the subproblem approach followed by the dual simplex method on an intercept problem, and the two Phase~1 methods differ only in the placement of zero-reduced-cost variables at the end of Phase~1. The practical drawback of the artificial bounding method, the choice of $M$, is therefore not intrinsic: Phases~A and~B realize its limit behavior with ordinary dual simplex iterations on problems with real data, the intercept phase settles the case of dual infeasibility, which the subproblem approach leaves open, and a lexicographic primal push removes the coefficient of $M$ that may remain at the end.
+The artificial bounding method, run with any sufficiently large $M$, is the subproblem approach followed by the dual simplex method on an intercept problem, and, when the dual of~\eqref{eq:P} is feasible, the two Phase~1 methods differ only in the placement of zero-reduced-cost variables at the end of Phase~1. The practical drawback of the artificial bounding method, the choice of $M$, is therefore not intrinsic: Phases~A and~B realize its limit behavior with ordinary dual simplex iterations on problems with real data, the intercept phase settles the case of dual infeasibility, which the subproblem approach leaves open, and a lexicographic primal push removes the coefficient of $M$ that may remain at the end.
 
-\section*{Declaration of competing interest}
-The author declares no known competing financial interests or personal relationships that could have appeared to influence the work reported in this paper.
+\section*{Statements and declarations}
 
-\section*{Funding}
-This research did not receive any specific grant from funding agencies in the public, commercial, or not-for-profit sectors.
+\paragraph{Funding.} No funding was received for conducting this study.
 
-\section*{Declaration of generative AI and AI-assisted technologies in the writing process}
-During the preparation of this work the author used Claude (Anthropic), via Claude Code, in order to draft and revise the text, organize the proofs and survey the literature. After using this tool, the author reviewed and edited the content as needed and takes full responsibility for the content of the published article.
+\paragraph{Competing interests.} The author has no competing interests to declare that are relevant to the content of this article.
 
+\paragraph{Data availability.} No data were used for the research described in this article.
+
+\paragraph{Use of generative AI.} The author used Claude (Anthropic), via Claude Code, to draft and revise the text, organize the written proofs and survey the literature, and in implementing the solver ENOMOTO-Solver mentioned in Remark~\ref{rem:feasibility}. The results are due to the author. The author has checked all text and proofs and takes full responsibility for the content of this article.
 \begin{thebibliography}{99}
+
+\bibitem{bazaraa2010}
+M.~S.~Bazaraa, J.~J.~Jarvis, H.~D.~Sherali,
+Linear Programming and Network Flows, 4th ed.,
+Wiley, Hoboken, NJ, 2010.
 
 \bibitem{bertsimas1997}
 D.~Bertsimas, J.~N.~Tsitsiklis,
@@ -276,11 +286,6 @@ W.~H.~Freeman, New York, 1983.
 M.~Cococcioni, L.~Fiaschi,
 The Big-M method with the numerical infinite M,
 Optim. Lett. 15 (2021) 2455--2468.
-
-\bibitem{dantzig1955}
-G.~B.~Dantzig, A.~Orden, P.~Wolfe,
-The generalized simplex method for minimizing a linear form under linear inequality restraints,
-Pacific J. Math. 5 (1955) 183--195.
 
 \bibitem{enomotosolver}
 K.~Enomoto,

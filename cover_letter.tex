@@ -1,0 +1,57 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage[a4paper,margin=25mm]{geometry}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.7\baselineskip}
+\pagestyle{empty}
+
+\begin{document}
+
+\begin{flushright}
+Kan Enomoto\\
+Independent Researcher, Usa, Oita, Japan\\
+\href{mailto:enomotokan@gmail.com}{enomotokan@gmail.com}\\
+ORCID: \href{https://orcid.org/0009-0001-9485-0393}{0009-0001-9485-0393}
+\end{flushright}
+
+Editor-in-Chief\\
+\textit{Optimization Letters}
+
+Dear Editor,
+
+I am pleased to submit the manuscript ``Artificial bounding and the subproblem approach to dual Phase~1 coincide iteration by iteration'' for consideration for publication in \textit{Optimization Letters}.
+
+Dual simplex codes must start from a dual feasible basis, and variables with infinite bounds are the obstacle. Two established remedies are the artificial bounding method, which replaces infinite bounds by $\mp M$, and the subproblem approach, which minimizes the sum of dual infeasibilities over an auxiliary problem. The literature on the dual simplex method treats them as different techniques, and the artificial bounding method has been set aside in implementations because of the choice of $M$.
+
+The note shows that, for every sufficiently large $M$, the artificial bounding method visits exactly the bases of an $M$-free procedure: the dual simplex method on the auxiliary problem of the subproblem approach, followed by the dual simplex method on an \emph{intercept problem} determined by its optimal solution. The result holds for the textbook and the bound flipping ratio tests and for leaving-row rules such as dual steepest edge. On the primal side, the correspondence between the big-$M$ method with a symbolic $M$ and the two-phase method is classical, and the manuscript states this explicitly. In dual simplex codes, however, $M$ enters the bounds rather than the costs, and the dual counterpart yields consequences that are specific to these codes:
+\begin{enumerate}[leftmargin=*,topsep=0pt]
+\item When the dual problem is feasible, the two Phase~1 methods differ only in the placement of nonbasic variables with zero reduced cost, so no value of $M$ has to be chosen.
+\item When the dual problem is infeasible, the subproblem approach stops without distinguishing infeasibility from unboundedness, whereas the intercept phase decides between them using dual simplex iterations only and, in the unbounded case, returns a feasible point together with an improving ray.
+\item Nonbasic variables left at artificial bounds are removed by a lexicographic primal push, which returns an optimal basis without ever fixing $M$.
+\end{enumerate}
+
+The manuscript is a short theoretical note without computational experiments; all proofs are given in the main text. It is related to the work of Cococcioni and Fiaschi on the big-$M$ method with a non-Archimedean $M$, published in \textit{Optimization Letters}, and shows that on the dual side no non-Archimedean arithmetic is needed. The feasibility test of item~2 is implemented in my open-source solver ENOMOTO-Solver (\url{https://github.com/enomotokan/enomoto_solver}).
+
+Suggested reviewers:
+\begin{itemize}[leftmargin=*,topsep=0pt,itemsep=0pt]
+\item Achim Koberstein, Europa-Universität Viadrina (\href{mailto:koberstein@europa-uni.de}{koberstein@europa-uni.de})
+\item Julian Hall, University of Edinburgh (\href{mailto:jajhall@ed.ac.uk}{jajhall@ed.ac.uk})
+\item Tamás Terlaky, Lehigh University (\href{mailto:tat208@lehigh.edu}{tat208@lehigh.edu})
+\item Csaba Mészáros, HUN-REN Institute for Computer Science and Control (SZTAKI)\\ (\href{mailto:meszaros.csaba@sztaki.hu}{meszaros.csaba@sztaki.hu})
+\end{itemize}
+
+Generative AI (Claude, by Anthropic) was used in preparing the manuscript and in implementing the solver mentioned above, as described in the declaration in the manuscript. The results are my own, and I have checked all content and take full responsibility for it.
+
+This manuscript is original, has not been published, and is not under consideration by any other journal. I have no competing interests to declare.
+
+Thank you for considering this submission.
+
+Sincerely,
+
+Kan Enomoto
+
+\end{document}
